@@ -46,7 +46,7 @@ function showLogin() {
       e.preventDefault();
       const btn = $('#lg-go'); btn.disabled = true; btn.textContent = 'Signing in…'; $('#lg-err').textContent = '';
       const { error } = await supabase.auth.signInWithPassword({ email: $('#lg-email').value.trim(), password: $('#lg-pass').value });
-      if (error) { btn.disabled = false; btn.textContent = 'Sign in'; $('#lg-err').textContent = /invalid|credentials/i.test(error.message) ? 'Wrong login ID or password' : error.message; return; }
+      if (error) { btn.disabled = false; btn.textContent = 'Sign in'; $('#lg-err').textContent = /invalid login credentials/i.test(error.message) ? 'Wrong login ID or password' : (/api key/i.test(error.message) ? 'App key problem (VITE_SUPABASE_ANON_KEY wrong or not deployed): ' : '') + error.message; return; }
       ov.remove(); resolve();
     };
   });
