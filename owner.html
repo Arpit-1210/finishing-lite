@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#1967D2" />
+  <title>Owner Dashboard — Factory OS Finishing</title>
+  <link rel="icon" href="/public/favicon.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/src/styles/base.css" />
+  <link rel="stylesheet" href="/src/styles/owner.css" />
+</head>
+<body>
+<div class="app-shell">
+
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <span class="brand-mark">⬡</span>
+      <div>
+        <div class="brand-name">Factory<span class="brand-accent">OS</span></div>
+        <div class="brand-sub">Finishing</div>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <a class="nav-link" data-route="dashboard" href="#/dashboard"><span>🏠</span><span>Dashboard</span></a>
+      <a class="nav-link" data-route="production-log" href="#/production"><span>🏭</span><span>Production Log</span></a>
+      <a class="nav-link" data-route="org" href="#/supervisors"><span>🧑‍💼</span><span>Supervisors &amp; Teams</span></a>
+      <a class="nav-link" data-route="workers" href="#/workers"><span>👷</span><span>Workers</span></a>
+      <a class="nav-link" data-route="products" href="#/products"><span>🗂️</span><span>Products</span></a>
+    </nav>
+    <div class="sidebar-footer">
+      <span class="sync-pill" id="sync-pill"><span class="dot"></span><span id="sync-text">Live</span></span>
+    </div>
+  </aside>
+
+  <!-- Mobile topbar -->
+  <div class="mobile-topbar">
+    <button class="hamburger" id="hamburger" aria-label="Menu">☰</button>
+    <div class="mobile-brand">Factory<b>OS</b> Finishing</div>
+    <span class="sync-pill" id="sync-pill-mobile"><span class="dot"></span></span>
+  </div>
+  <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+  <!-- Main content -->
+  <div class="app-main">
+    <header class="app-topbar">
+      <div>
+        <h1 id="page-title">Dashboard</h1>
+        <div id="page-sub" style="font-size:13px;color:var(--ink-dim);margin-top:2px;"></div>
+      </div>
+      <div class="topbar-right">
+        <span class="pill" id="today-pill"></span>
+      </div>
+    </header>
+    <main class="app-content" id="page-root">
+      <div class="state-msg" style="padding-top:60px;">Loading…</div>
+    </main>
+  </div>
+
+</div>
+
+<div class="live-pill" id="live-pill"><span>✓</span><span id="live-pill-text">Updated just now</span></div>
+<div class="toast" id="toast"><span class="icon" id="toast-icon"></span><span id="toast-msg"></span></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <script type="module" src="/src/main-owner.js"></script>
+</body>
+</html>
