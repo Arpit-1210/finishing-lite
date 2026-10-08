@@ -245,13 +245,13 @@ async function drawReports() {
   const teams = myTeams();
   const days = teamDaysFor(teams, D.logs).sort((a, b) => (a.date < b.date ? 1 : -1));
   const byTeam = teams.map(t => ({ t, s: sumDays(days.filter(d => d.teamId === t.id)) }));
-  const monthly = await loadMonthly(supabase);
+  const monthly = await loadMonthly(supabase, supId);
   $('rep-content').innerHTML = `
     <div class="section-head"><div><div class="section-title">Team performance — last 30 days</div><div class="section-sub">Value produced ÷ labour cost</div></div></div>
     <div class="table-wrap"><table class="dt"><thead><tr><th>Team</th><th class="num">Units</th><th class="num">Value</th><th class="num">Labour Cost</th><th class="num">Value ÷ Labour</th></tr></thead><tbody>${byTeam.map(({ t, s }) => `<tr><td class="bold">${esc(teamName(t))}</td><td class="num">${num(s.units)}</td><td class="num">${inr(s.value)}</td><td class="num">${inr(s.wage)}</td><td class="num" style="font-weight:700">${fmtX(s.ratio)}</td></tr>`).join('')}</tbody></table></div>
     <div class="section-head"><div class="section-title">Day by day</div></div>
     <div class="table-wrap"><table class="dt"><thead><tr><th>Date</th><th>Team</th><th class="num">Units</th><th class="num">Value</th><th class="num">Labour Cost</th><th class="num">Value ÷ Labour</th></tr></thead><tbody>${days.map(d => `<tr><td>${fmtDate(d.date)}</td><td class="bold">${esc(d.team)}</td><td class="num">${num(d.units)}</td><td class="num">${inr(d.value)}</td><td class="num">${inr(d.wage)}</td><td class="num" style="font-weight:700">${fmtX(d.ratio)}</td></tr>`).join('') || '<tr><td colspan="6" style="text-align:center;padding:20px;color:#667085">No data</td></tr>'}</tbody></table></div>
-    <div class="section-head"><div class="section-title">Monthly record (whole factory)</div></div>
+    <div class="section-head"><div class="section-title">Monthly record</div></div>
     ${monthlyTableHTML(monthly, 'dt')}`;
 }
 

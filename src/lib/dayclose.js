@@ -19,7 +19,7 @@ export function startAutoClose(supabase) {
 }
 
 /** Month-by-month record: finished days from summaries + today live. */
-export async function loadMonthly(supabase) {
+export async function loadMonthly(supabase, supervisorId = null) {
   const today = istToday();
   const [summaries, lr, pr, tr, wr, rosters] = await Promise.all([
     fetchSummaries(supabase),
@@ -36,8 +36,14 @@ export async function loadMonthly(supabase) {
     m.dates.add(date); m.units += u; m.value += v; m.wage += g;
     months.set(k, m);
   };
-  for (const s of summaries) if (s.summary_date < today) add(s.summary_date, Number(s.units), Number(s.value), Number(s.wage));
-  const logs = lr.data || [];
+  const mine = supervisorId ? new Set((tr.data || []).filter(t => t.supervisor_id === supervisorId).map(t => t.id)) : null;
+  for (const s of summaries) {
+    if (s.summary_date >= today) continue;
+    if (!mine) { add(s.summary_date, Number(s.units), Number(s.value), Number(s.wage)); continue; }
+    const ts = (s.teams || []).filter(t => mine.has(t.team_id));
+    if (ts.length) add(s.summary_date, ts.reduce((a, t) => a + Number(t.units || 0), 0), ts.reduce((a, t) => a + Number(t.value || 0), 0), ts.reduce((a, t) => a + Number(t.wage || 0), 0));
+  }
+  const logs = (lr.data || []).filter(l => !mine || mine.has(l.team_id));
   if (logs.length) {
     const t = sumDays(buildTeamDays(logs, tr.data || [], wr.data || [], rosters, [], pr.data || []));
     add(today, t.units, t.value, t.wage);
