@@ -1,7 +1,7 @@
 import './styles/base.css';
 import { supabase, HAS_KEYS } from './lib/supabase.js';
 import { requireLogin, blockedScreen } from './lib/auth.js';
-import { istToday, fetchRosterRows, rosterIndex, membersOn, conflictTeam, withRoster, saveRoster, hasExact } from './lib/roster.js';
+import { istToday, fetchRosterRows, rosterIndex, membersOn, conflictTeam, withRoster, saveRoster, hasExact, teamsForDay, membersForDay } from './lib/roster.js';
 import { buildTeamDays, sumDays, fetchSummaries, inr, num, fmtX, esc, fmtDate, teamName } from './lib/calc.js';
 import { startAutoClose, closeDays, loadMonthly, monthlyTableHTML } from './lib/dayclose.js';
 
@@ -46,6 +46,8 @@ async function loadLogs() {
   D.logs = data || [];
 }
 const myTeams = () => D.teams.filter(t => t.supervisor_id === supId);
+const dayTeams = () => teamsForDay(rosterIndex(D.rosters), myTeams(), SEL, D.logs);
+const membersToday = tid => membersForDay(rosterIndex(D.rosters), tid, SEL, D.logs.some(l => l.team_id === tid && l.production_date === SEL));
 const supOf = t => D.sups.find(s => s.id === t.supervisor_id);
 const prodName = id => D.products.find(p => p.id === id)?.name || '—';
 
@@ -80,7 +82,7 @@ async function rerender(reload = true) {
   $('global-date').value = SEL;
   try {
     if (reload) await loadLogs();
-    if (!myTeams().find(t => t.id === teamId)) teamId = myTeams()[0]?.id || null;
+    if (!dayTeams().find(t => t.id === teamId)) teamId = dayTeams()[0]?.id || null;
     supSlot();
     ({ dashboard: drawDash, production: drawProd, teams: drawTeams, log: drawLog, reports: drawReports })[page]();
   } catch (e) { $(({ dashboard: 'dash', production: 'prod', teams: 'teams', log: 'log', reports: 'rep' })[page] + '-content').innerHTML = `<div class="state-msg" style="color:#b91c1c">Error: ${esc(e.message)}</div>`; }
@@ -96,13 +98,13 @@ async function refreshClose(date) { if (date < TODAY) { await closeDays(supabase
 
 // ── dashboard ──
 function drawDash() {
-  const teams = myTeams();
-  if (!teams.length) { $('dash-content').innerHTML = '<div class="state-msg">No teams yet. Open the Teams page and add a team.</div>'; return; }
+  const teams = dayTeams();
+  if (!teams.length) { $('dash-content').innerHTML = `<div class="state-msg">No team made for ${fmtDate(SEL)} yet. Open the Teams page and make a team.</div>`; return; }
   const days = teamDaysFor(teams, D.logs).filter(r => r.date === SEL);
   const t = sumDays(days);
   const rows = teams.map(tm => {
     const r = days.find(d => d.teamId === tm.id);
-    const members = membersOn(ridx(), tm.id, SEL);
+    const members = membersToday(tm.id);
     return `<tr><td class="bold">${esc(teamName(tm))}</td><td class="num">${members.length}</td><td class="num">${r ? num(r.units) : '—'}</td><td class="num">${r ? inr(r.value) : '—'}</td><td class="num">${r ? inr(r.wage) : '—'}</td><td class="num" style="font-weight:700">${r ? fmtX(r.ratio) : '—'}</td></tr>`;
   }).join('');
   $('dash-content').innerHTML = `
@@ -118,9 +120,9 @@ function drawDash() {
 
 // ── production ──
 function drawProd() {
-  const teams = myTeams();
-  if (!teams.length) { $('prod-content').innerHTML = '<div class="state-msg">No teams yet. Open the Teams page and add a team.</div>'; return; }
-  const members = membersOn(ridx(), teamId, SEL);
+  const teams = dayTeams();
+  if (!teams.length) { $('prod-content').innerHTML = `<div class="state-msg">No team made for ${fmtDate(SEL)} yet.<br/><button class="btn-primary" style="margin-top:10px" onclick="document.querySelector('.nav-item[data-page=teams]').click()">+ Make a team</button></div>`; return; }
+  const members = membersToday(teamId);
   const entries = D.logs.filter(l => l.team_id === teamId && l.production_date === SEL);
   const day = teamDaysFor(teams, entries)[0];
   $('prod-content').innerHTML = `
@@ -164,7 +166,7 @@ async function saveEntry() {
   const p = D.products.find(x => x.name.toLowerCase() === name.toLowerCase());
   if (!p) return toast('Pick a product from the list', 'error');
   if (!(qty > 0)) return toast('Enter quantity', 'error');
-  if (!membersOn(ridx(), teamId, SEL).length) return toast('Add workers to this team for this day first (Teams page)', 'error');
+  if (!teamId || !membersToday(teamId).length) return toast('Add workers to this team for this day first (Teams page)', 'error');
   const btn = $('p-save'); btn.disabled = true;
   const { error } = await supabase.from('fin_production_log').insert({ team_id: teamId, product_id: p.id, quantity: qty, production_date: SEL, production_time: $('p-time').value || null });
   btn.disabled = false;
@@ -174,25 +176,49 @@ async function saveEntry() {
 
 // ── teams ──
 function drawTeams() {
-  const teams = myTeams(); const idx = ridx();
+  const teams = dayTeams(); const idx = ridx();
   const supName = t => supOf(t)?.name || '';
   $('teams-content').innerHTML = `
-    <div class="prod-panel"><div class="add-member-row"><input id="nt-name" placeholder="New team name (e.g. Team 1)" /><button class="btn-primary" id="nt-add" style="padding:9px 16px">+ Add Team</button></div></div>
+    <div class="prod-panel"><div style="font-size:12px;color:#667085;margin-bottom:8px">Every day starts with no teams. Make the teams you need for ${fmtDate(SEL)}.</div><div class="add-member-row"><input id="nt-name" placeholder="Team name (optional)" /><button class="btn-primary" id="nt-add" style="padding:9px 16px">+ Make a new team</button></div><button class="btn-ghost" id="nt-copy" style="margin-top:8px">Copy previous day's teams</button></div>
     ${teams.map(t => {
-      const mem = membersOn(idx, t.id, SEL);
+      const mem = membersToday(t.id);
       return `<div class="prod-panel" data-team="${t.id}">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px"><div style="font-weight:700;font-size:15px">${esc(teamName(t))} <span style="font-weight:500;font-size:12px;color:#667085">· ${mem.length} workers on ${fmtDate(SEL)}${hasExact(idx, t.id, SEL) ? '' : ' (carried from earlier)'}</span></div>
         <div><button class="btn-ghost" data-rename="${t.id}" style="padding:4px 10px">Rename</button> <button class="btn-ghost" data-edit="${t.id}" style="padding:4px 10px">Edit workers</button></div></div>
         <div class="member-chips">${mem.map(m => `<span class="chip">${esc(m)}</span>`).join('') || '<span style="color:#667085;font-size:13px">No workers</span>'}</div>
         <div class="editor" id="ed-${t.id}"></div></div>`;
-    }).join('') || '<div class="state-msg">No teams yet — add one above.</div>'}`;
+    }).join('') || '<div class="state-msg">No teams for this day yet — tap “Make a new team”.</div>'}`;
   $('nt-add').onclick = async () => {
     if (!supId) return toast('No supervisor selected', 'error');
     const nm = $('nt-name').value.trim();
-    const n = Math.max(0, ...D.teams.filter(t => t.supervisor_id === supId).map(t => t.team_number)) + 1;
-    const { data, error } = await supabase.from('fin_teams').insert({ supervisor_id: supId, team_number: n, name: nm || 'Team ' + n }).select().single();
-    if (error) return toast(error.message, 'error');
-    D.teams.push(data); toast('Team added'); drawTeams();
+    const active = new Set(dayTeams().map(t => String(t.id)));
+    const idle = myTeams().filter(t => !active.has(String(t.id))).sort((a, b) => a.team_number - b.team_number)[0];
+    try {
+      if (idle) {
+        await saveRoster(supabase, idle.id, SEL, []); D.rosters = withRoster(D.rosters, idle.id, SEL, []);
+        if (nm) { const { error } = await supabase.from('fin_teams').update({ name: nm }).eq('id', idle.id); if (error) throw error; idle.name = nm; }
+      } else {
+        const n = Math.max(0, ...D.teams.filter(t => t.supervisor_id === supId).map(t => t.team_number)) + 1;
+        const { data, error } = await supabase.from('fin_teams').insert({ supervisor_id: supId, team_number: n, name: nm || 'Team ' + n }).select().single();
+        if (error) throw error;
+        D.teams.push(data); await saveRoster(supabase, data.id, SEL, []); D.rosters = withRoster(D.rosters, data.id, SEL, []);
+      }
+    } catch (e) { return toast(e.message, 'error'); }
+    toast('Team made for this day'); drawTeams();
+  };
+  $('nt-copy').onclick = async () => {
+    const prevDates = D.rosters.map(r => r.roster_date).filter(d => d < SEL).sort();
+    const prev = prevDates[prevDates.length - 1];
+    if (!prev) return toast('No earlier day to copy', 'error');
+    const ix = ridx(); const here = new Set(dayTeams().map(t => String(t.id)));
+    const taken = new Set(D.teams.flatMap(t => (ix.get(String(t.id)) || []).find(e => e.date === SEL)?.members || []));
+    let n = 0;
+    for (const t of myTeams()) {
+      if (here.has(String(t.id)) || !hasExact(ix, t.id, prev)) continue;
+      const mem = membersForDay(ix, t.id, prev).filter(m => !taken.has(m));
+      try { await saveRoster(supabase, t.id, SEL, mem); D.rosters = withRoster(D.rosters, t.id, SEL, mem); mem.forEach(m => taken.add(m)); n++; } catch (e) { return toast(e.message, 'error'); }
+    }
+    toast(n ? `Copied ${n} team${n > 1 ? 's' : ''} from ${fmtDate(prev)}` : 'Nothing new to copy'); drawTeams();
   };
   $('teams-content').querySelectorAll('[data-rename]').forEach(b => b.onclick = async () => {
     const t = D.teams.find(x => x.id === b.dataset.rename); const nm = prompt('Team name', teamName(t));
@@ -206,7 +232,7 @@ function drawTeams() {
 function openEditor(tid, supName) {
   const box = $('ed-' + tid);
   if (box.innerHTML) { box.innerHTML = ''; return; }
-  const idx = ridx(); let sel = new Set(membersOn(idx, tid, SEL));
+  const idx = ridx(); let sel = new Set(membersToday(tid));
   const draw = (q = '') => {
     const list = D.workers.filter(w => w.name.toLowerCase().includes(q.toLowerCase()));
     box.innerHTML = `<div style="border-top:1px solid #e4e7ec;margin-top:10px;padding-top:10px">

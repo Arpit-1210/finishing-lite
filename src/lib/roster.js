@@ -32,11 +32,25 @@ export function hasExact(index, teamId, date) {
   return (index.get(String(teamId)) || []).some(e => e.date === date);
 }
 
+/** Teams that exist ON this day: saved for the day, or (old data) have production logged that day. */
+export function teamsForDay(index, teams, date, logs = []) {
+  const logged = new Set(logs.filter(l => l.production_date === date).map(l => String(l.team_id)));
+  return teams.filter(t => hasExact(index, t.id, date) || logged.has(String(t.id)));
+}
+
+/** Members for the day. New days start blank; old days that were logged but never saved fall back to carry-forward. */
+export function membersForDay(index, teamId, date, hasLogs = false) {
+  const e = (index.get(String(teamId)) || []).find(x => x.date === date);
+  if (e) return e.members;
+  return hasLogs ? membersOn(index, teamId, date) : [];
+}
+
 /** Name of ANOTHER team (any supervisor) that already has this worker on `date`, or null. */
 export function conflictTeam(index, teams, teamId, date, worker, supName = () => '') {
   for (const t of teams) {
     if (String(t.id) === String(teamId)) continue;
-    if (membersOn(index, t.id, date).includes(worker)) return `${t.name || 'Team ' + t.team_number}${supName(t) ? ' (' + supName(t) + ')' : ''}`;
+    const e = (index.get(String(t.id)) || []).find(x => x.date === date);
+    if (e && e.members.includes(worker)) return `${t.name || 'Team ' + t.team_number}${supName(t) ? ' (' + supName(t) + ')' : ''}`;
   }
   return null;
 }

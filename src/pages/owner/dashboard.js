@@ -18,7 +18,8 @@ export async function renderDashboard(root) {
     </div>
     <div class="section-head"><div><div class="section-title">Supervisor Performance</div><div class="section-sub">Value produced ÷ labour cost over the selected period</div></div><span class="badge badge-green">● Live</span></div>
     <div id="d-sup"></div>
-    <div class="section-head"><div class="section-title">Team Performance</div></div>
+    <div class="section-head"><div><div class="section-title">Team Report — one day</div><div class="section-sub">Teams made that day</div></div></div>
+    <div class="card" style="margin-bottom:12px;"><label style="font-size:12px;font-weight:600;color:var(--ink-dim);margin-right:8px;">Day</label><input type="date" id="d-team-date" value="${TODAY}" max="${TODAY}" style="padding:7px 10px;border:1px solid var(--border-strong);border-radius:8px;font-size:14px;"></div>
     <div id="d-team"></div>
     <div class="section-head"><div><div class="section-title">Value ÷ Labour — each day</div><div class="section-sub">Whole factory, per day</div></div></div>
     <div class="card" style="margin-bottom:20px;"><canvas id="d-chart"></canvas></div>
@@ -26,6 +27,18 @@ export async function renderDashboard(root) {
     <div id="d-days"></div>
     <div class="section-head"><div><div class="section-title">Monthly Record</div><div class="section-sub">Saved automatically after 12:00 am each day</div></div></div>
     <div id="d-month"></div>`;
+
+  let ctx = null;
+  async function drawTeamReport() {
+    if (!ctx) return;
+    const day = root.querySelector('#d-team-date')?.value || TODAY;
+    const { data } = await supabase.from('fin_production_log').select('*').eq('production_date', day).limit(20000);
+    const tdd = buildTeamDays(data || [], ctx.teams, ctx.wr, ctx.rosters, ctx.summaries, ctx.prods);
+    const teamRows = ctx.teams.map(t => ({ t, s: sumDays(tdd.filter(r => r.teamId === t.id)) })).filter(x => x.s.wage > 0 || x.s.units > 0).sort((a, b) => b.s.ratio - a.s.ratio);
+    const el = root.querySelector('#d-team'); if (!el) return;
+    el.innerHTML = `<div class="table-wrap"><table class="dt">${ctx.head('Team')}<tbody>${teamRows.map(x => ctx.row(`${ctx.sups.find(s => s.id === x.t.supervisor_id)?.name || ''} · ${teamName(x.t)}`, x.s)).join('') || '<tr><td colspan="5" style="text-align:center;padding:20px">No team produced anything on this day</td></tr>'}</tbody></table></div>`;
+  }
+  root.querySelector('#d-team-date')?.addEventListener('change', drawTeamReport);
 
   async function load() {
     const from = new Date(Date.now() + 5.5 * 3600 * 1000 - days * 86400000).toISOString().slice(0, 10);
@@ -53,8 +66,8 @@ export async function renderDashboard(root) {
     const head = f => `<thead><tr><th>${f}</th><th class="num">Units</th><th class="num">Value</th><th class="num">Labour Cost</th><th class="num">Value ÷ Labour</th></tr></thead>`;
     const supRows = sups.map(s => ({ s, t: sumDays(td.filter(r => r.supId === s.id)) })).sort((a, b) => b.t.ratio - a.t.ratio);
     root.querySelector('#d-sup').innerHTML = `<div class="table-wrap"><table class="dt">${head('Supervisor')}<tbody>${supRows.map(x => row(x.s.name, x.t)).join('') || '<tr><td colspan="5" style="text-align:center;padding:20px">No supervisors yet</td></tr>'}</tbody></table></div>`;
-    const teamRows = teams.map(t => ({ t, s: sumDays(td.filter(r => r.teamId === t.id)) })).filter(x => x.s.wage > 0 || x.s.units > 0).sort((a, b) => b.s.ratio - a.s.ratio);
-    root.querySelector('#d-team').innerHTML = `<div class="table-wrap"><table class="dt">${head('Team')}<tbody>${teamRows.map(x => row(`${sups.find(s => s.id === x.t.supervisor_id)?.name || ''} · ${teamName(x.t)}`, x.s)).join('') || '<tr><td colspan="5" style="text-align:center;padding:20px">No data</td></tr>'}</tbody></table></div>`;
+    ctx = { teams, sups, wr: wr.data || [], rosters, summaries, prods: pr.data || [], row, head };
+    drawTeamReport();
 
     const dates = [...new Set(td.map(r => r.date))].sort();
     const perDay = dates.map(d => ({ d, ...sumDays(td.filter(r => r.date === d)) }));
