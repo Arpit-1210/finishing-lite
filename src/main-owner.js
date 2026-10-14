@@ -8,6 +8,7 @@ import { renderProductionLog } from './pages/owner/productionLog.js';
 import { renderOrg } from './pages/owner/org.js';
 import { renderWorkers } from './pages/owner/workers.js';
 import { renderProducts } from './pages/owner/products.js';
+import { renderInventory } from './pages/owner/inventory.js';
 
 const pageRoot = document.getElementById('page-root');
 const pageTitle = document.getElementById('page-title');
@@ -23,6 +24,7 @@ overlay?.addEventListener('click', () => { sidebar.classList.remove('is-open'); 
 const routes = {
   dashboard: { hash: 'dashboard', title: 'Dashboard', sub: 'Live finishing overview', fn: renderDashboard },
   'production-log': { hash: 'production', title: 'Production Log', sub: 'All entries by supervisor, team & date', fn: renderProductionLog },
+  inventory: { hash: 'inventory', title: 'Inventory', sub: 'Total finished stock by product', fn: renderInventory },
   org: { hash: 'supervisors', title: 'Supervisors & Teams', sub: 'Add supervisors, give logins, manage teams', fn: renderOrg },
   workers: { hash: 'workers', title: 'Workers', sub: 'Shared with Moulding · rates & status', fn: renderWorkers },
   products: { hash: 'products', title: 'Products', sub: 'Finishing catalogue & prices', fn: renderProducts },
