@@ -532,3 +532,14 @@ table.data-table td.bold { font-weight: 700; }
 .badge-green { background: var(--green-soft); color: var(--green); }
 .badge-orange { background: var(--orange-soft); color: var(--orange); }
 .badge-blue { background: var(--primary-soft); color: var(--primary); }
+
+/* spacing between dashboard sections */
+.app-content .section-head:not(:first-child) { margin-top: 26px; }
+.app-content .table-wrap + .section-head { margin-top: 26px; }
+
+@media (max-width: 640px) {
+  table.data-table th, table.data-table td { padding: 10px 7px; font-size: 12px; letter-spacing: 0; }
+  table.data-table th { font-size: 10px; }
+  table.data-table td.bold, table.data-table td:first-child { white-space: nowrap; }
+  .kpi-value { font-size: 22px; }
+}

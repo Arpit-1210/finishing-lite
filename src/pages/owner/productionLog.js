@@ -19,7 +19,7 @@ export async function renderProductionLog(root) {
     if (error) { root.querySelector('#pl-body').innerHTML = `<div class="state-msg">${esc(error.message)}</div>`; return; }
     const sf = root.querySelector('#f-sup').value;
     const list = (data || []).filter(l => !sf || teams.find(t => t.id === l.team_id)?.supervisor_id === sf);
-    root.querySelector('#pl-body').innerHTML = `<div class="table-wrap"><table class="dt"><thead><tr><th>Date</th><th>Supervisor</th><th>Team</th><th>Product</th><th class="num">Qty</th><th class="num">Value</th><th></th></tr></thead><tbody>${list.map(l => {
+    root.querySelector('#pl-body').innerHTML = `<div class="table-wrap"><table class="data-table"><thead><tr><th>Date</th><th>Supervisor</th><th>Team</th><th>Product</th><th class="num">Qty</th><th class="num">Value</th><th></th></tr></thead><tbody>${list.map(l => {
       const t = teams.find(x => x.id === l.team_id), p = prods.get(l.product_id);
       return `<tr><td>${fmtDate(l.production_date)}</td><td>${esc(sups.find(s => s.id === t?.supervisor_id)?.name || '')}</td><td>${esc(teamName(t))}</td><td class="bold">${esc(p?.name || '—')}</td><td class="num">${num(l.quantity)}</td><td class="num">${inr(l.quantity * (p?.selling_price || 0))}</td><td><button class="btn btn-sm" data-del="${l.id}" data-date="${l.production_date}">Delete</button></td></tr>`;
     }).join('') || '<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--ink-dim)">No entries</td></tr>'}</tbody></table></div>`;

@@ -36,7 +36,7 @@ export async function renderDashboard(root) {
     const tdd = buildTeamDays(data || [], ctx.teams, ctx.wr, ctx.rosters, ctx.summaries, ctx.prods);
     const teamRows = ctx.teams.map(t => ({ t, s: sumDays(tdd.filter(r => r.teamId === t.id)) })).filter(x => x.s.wage > 0 || x.s.units > 0).sort((a, b) => b.s.ratio - a.s.ratio);
     const el = root.querySelector('#d-team'); if (!el) return;
-    el.innerHTML = `<div class="table-wrap"><table class="dt">${ctx.head('Team')}<tbody>${teamRows.map(x => ctx.row(`${ctx.sups.find(s => s.id === x.t.supervisor_id)?.name || ''} · ${teamName(x.t)}`, x.s)).join('') || '<tr><td colspan="5" style="text-align:center;padding:20px">No team produced anything on this day</td></tr>'}</tbody></table></div>`;
+    el.innerHTML = `<div class="table-wrap"><table class="data-table">${ctx.head('Team')}<tbody>${teamRows.map(x => ctx.row(`${ctx.sups.find(s => s.id === x.t.supervisor_id)?.name || ''} · ${teamName(x.t)}`, x.s)).join('') || '<tr><td colspan="5" style="text-align:center;padding:20px">No team produced anything on this day</td></tr>'}</tbody></table></div>`;
   }
   root.querySelector('#d-team-date')?.addEventListener('change', drawTeamReport);
 
@@ -56,23 +56,23 @@ export async function renderDashboard(root) {
     const today = sumDays(td.filter(r => r.date === TODAY)), all = sumDays(td);
     const activeToday = new Set(td.filter(r => r.date === TODAY).map(r => r.teamId)).size;
     root.querySelector('#d-kpis').innerHTML = `<div class="kpi-grid">
-      <div class="kpi-card"><div class="kpi-icon">🏭</div><div class="kpi-label">Units Today</div><div class="kpi-value">${num(today.units)}</div><div class="kpi-sub">${activeToday} teams working</div></div>
-      <div class="kpi-card"><div class="kpi-icon">💰</div><div class="kpi-label">Value Today</div><div class="kpi-value">${inr(today.value)}</div><div class="kpi-sub">at selling price</div></div>
-      <div class="kpi-card"><div class="kpi-icon">👷</div><div class="kpi-label">Labour Cost Today</div><div class="kpi-value">${inr(today.wage)}</div><div class="kpi-sub">1.5× overtime included</div></div>
-      <div class="kpi-card"><div class="kpi-icon">📈</div><div class="kpi-label">Value ÷ Labour Today</div><div class="kpi-value">${fmtX(today.ratio)}</div><div class="kpi-sub">higher is better</div></div>
-      <div class="kpi-card"><div class="kpi-icon">🏭</div><div class="kpi-label">Value ÷ Labour (period)</div><div class="kpi-value">${fmtX(all.ratio)}</div><div class="kpi-sub">${inr(all.value)} ÷ ${inr(all.wage)}</div></div></div>`;
+      <div class="kpi-card" style="--accent-color:var(--primary)"><div class="kpi-icon">🏭</div><div class="kpi-label">Units Today</div><div class="kpi-value">${num(today.units)}</div><div class="kpi-sub">${activeToday} teams working</div></div>
+      <div class="kpi-card" style="--accent-color:var(--green)"><div class="kpi-icon">💰</div><div class="kpi-label">Value Today</div><div class="kpi-value">${inr(today.value)}</div><div class="kpi-sub">at selling price</div></div>
+      <div class="kpi-card" style="--accent-color:var(--red)"><div class="kpi-icon">👷</div><div class="kpi-label">Labour Cost Today</div><div class="kpi-value">${inr(today.wage)}</div><div class="kpi-sub">1.5× overtime included</div></div>
+      <div class="kpi-card" style="--accent-color:var(--purple)"><div class="kpi-icon">📈</div><div class="kpi-label">Value ÷ Labour Today</div><div class="kpi-value">${fmtX(today.ratio)}</div><div class="kpi-sub">higher is better</div></div>
+      <div class="kpi-card" style="--accent-color:var(--orange)"><div class="kpi-icon">🏭</div><div class="kpi-label">Value ÷ Labour (period)</div><div class="kpi-value">${fmtX(all.ratio)}</div><div class="kpi-sub">${inr(all.value)} ÷ ${inr(all.wage)}</div></div></div>`;
 
     const row = (name, s) => `<tr><td class="bold">${esc(name)}</td><td class="num">${num(s.units)}</td><td class="num">${inr(s.value)}</td><td class="num">${inr(s.wage)}</td><td class="num" style="font-weight:700">${fmtX(s.ratio)}</td></tr>`;
     const head = f => `<thead><tr><th>${f}</th><th class="num">Units</th><th class="num">Value</th><th class="num">Labour Cost</th><th class="num">Value ÷ Labour</th></tr></thead>`;
     const supRows = sups.map(s => ({ s, t: sumDays(td.filter(r => r.supId === s.id)) })).sort((a, b) => b.t.ratio - a.t.ratio);
-    root.querySelector('#d-sup').innerHTML = `<div class="table-wrap"><table class="dt">${head('Supervisor')}<tbody>${supRows.map(x => row(x.s.name, x.t)).join('') || '<tr><td colspan="5" style="text-align:center;padding:20px">No supervisors yet</td></tr>'}</tbody></table></div>`;
+    root.querySelector('#d-sup').innerHTML = `<div class="table-wrap"><table class="data-table">${head('Supervisor')}<tbody>${supRows.map(x => row(x.s.name, x.t)).join('') || '<tr><td colspan="5" style="text-align:center;padding:20px">No supervisors yet</td></tr>'}</tbody></table></div>`;
     ctx = { teams, sups, wr: wr.data || [], rosters, summaries, prods: pr.data || [], row, head };
     drawTeamReport();
 
     const dates = [...new Set(td.map(r => r.date))].sort();
     const perDay = dates.map(d => ({ d, ...sumDays(td.filter(r => r.date === d)) }));
-    root.querySelector('#d-days').innerHTML = `<div class="table-wrap"><table class="dt">${head('Date')}<tbody>${[...perDay].reverse().map(x => row(fmtDate(x.d), x)).join('') || '<tr><td colspan="5" style="text-align:center;padding:20px">No data</td></tr>'}</tbody></table></div>`;
-    root.querySelector('#d-month').innerHTML = monthlyTableHTML(monthly, 'dt');
+    root.querySelector('#d-days').innerHTML = `<div class="table-wrap"><table class="data-table">${head('Date')}<tbody>${[...perDay].reverse().map(x => row(fmtDate(x.d), x)).join('') || '<tr><td colspan="5" style="text-align:center;padding:20px">No data</td></tr>'}</tbody></table></div>`;
+    root.querySelector('#d-month').innerHTML = monthlyTableHTML(monthly, "data-table");
 
     if (window.Chart) {
       if (chart) chart.destroy();

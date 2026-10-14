@@ -6,7 +6,7 @@ export async function renderProducts(root) {
   root.innerHTML = `<div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:14px">
     <input id="ps" placeholder="Search product…" style="padding:9px 12px;border:1px solid var(--border-strong);border-radius:8px;width:220px"><button class="btn btn-primary btn-sm" id="padd">+ Add Product</button></div>
     <div id="pc" style="font-size:12px;color:var(--ink-dim);margin-bottom:10px"></div>
-    <div class="table-wrap"><table class="dt"><thead><tr><th>Product</th><th class="num">Selling Price</th><th>Status</th><th></th></tr></thead><tbody id="pb"></tbody></table></div>`;
+    <div class="table-wrap"><table class="data-table"><thead><tr><th>Product</th><th class="num">Selling Price</th><th>Status</th><th></th></tr></thead><tbody id="pb"></tbody></table></div>`;
   const draw = () => {
     const q = root.querySelector('#ps').value.toLowerCase();
     const l = list.filter(p => p.name.toLowerCase().includes(q));
