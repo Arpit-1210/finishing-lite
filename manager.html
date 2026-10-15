@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#1967D2" />
+  <title>Manager — Factory OS Finishing</title>
+  <link rel="icon" href="/public/favicon.svg" type="image/svg+xml" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <script>if("serviceWorker" in navigator)window.addEventListener("load",function(){navigator.serviceWorker.register("/sw.js").catch(function(){})});</script>
+</head>
+<body class="mgr">
+  <header class="mgr-top">
+    <div class="mgr-brand">Factory<b>OS</b> <span>Finishing · Manager</span></div>
+    <div class="mgr-actions"><button type="button" class="refresh-btn" onclick="location.reload()">&#8635; Refresh</button><button type="button" class="refresh-btn" id="mgr-logout">Logout</button></div>
+  </header>
+  <main class="mgr-main">
+    <div class="mgr-filters card">
+      <div><label for="m-date">📅 Date</label><input type="date" id="m-date" /></div>
+      <div><label for="m-sup">👤 Supervisor</label><select id="m-sup"></select></div>
+      <button type="button" class="range-btn" id="m-today">Today</button>
+    </div>
+    <div id="m-body"><div class="state-msg">Loading…</div></div>
+  </main>
+  <div class="toast" id="toast"><span class="icon" id="toast-icon"></span><span id="toast-msg"></span></div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <script type="module" src="/src/main-manager.js"></script>
+</body>
+</html>

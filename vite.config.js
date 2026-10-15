@@ -7,6 +7,7 @@ export default defineConfig({
       input: {
         main: 'index.html',
         owner: 'owner.html',
+        manager: 'manager.html',
       }
     }
   }

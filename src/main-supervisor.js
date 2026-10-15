@@ -298,6 +298,7 @@ async function drawReports() {
   try {
     me = await requireLogin();
     if (!HAS_KEYS) return;
+    if (me.manager) { location.replace('/manager.html'); return; }
     if (!me.admin && !me.supervisor) return blockedScreen('This login is not set up as a Finishing supervisor');
     if (me.admin) $('owner-link').style.display = '';
     await loadAll();

@@ -43,6 +43,7 @@ async function navigate(route) {
 }
 window.addEventListener('hashchange', () => { if (authed) navigate(getRoute()); });
 requireLogin().then(me => {
+  if (me.manager) { location.replace('/manager.html'); return; }
   if (!me.admin) return blockedScreen('Owner access only');
   authed = true; navigate(getRoute()); startAutoClose(supabase);
 });
