@@ -9,7 +9,7 @@ import { renderInventory } from './pages/owner/inventory.js';
 
 const $ = id => document.getElementById(id);
 const TODAY = istToday();
-let SEL = TODAY, SUP = '';
+let SEL = TODAY, SUP = '', Q = '';
 let D = { sups: [], teams: [], products: [], workers: [], rosters: [], summaries: [] };
 
 const css = document.createElement('style');
@@ -44,9 +44,12 @@ async function loadAll() {
   sel.value = SUP;
 }
 
-async function draw() {
+let CACHE = null;
+async function draw(force = false) {
   const body = $('m-body');
-  const { data: logs, error } = await supabase.from('fin_production_log').select('*').eq('production_date', SEL).limit(20000);
+  let logs, error;
+  if (CACHE && CACHE.date === SEL && !force) logs = CACHE.logs;
+  else { const r = await supabase.from('fin_production_log').select('*').eq('production_date', SEL).limit(20000); logs = r.data; error = r.error; if (!error) CACHE = { date: SEL, logs }; }
   if (error) { body.innerHTML = `<div class="state-msg" style="color:#b91c1c">Error: ${esc(error.message)}. Has sql/add_manager.sql been run?</div>`; return; }
   const teamSup = new Map(D.teams.map(t => [t.id, t.supervisor_id]));
   const prod = new Map(D.products.map(p => [p.id, p]));
@@ -65,20 +68,9 @@ async function draw() {
     byProd.set(l.product_id, r);
   }
   const plist = [...byProd.values()].sort((a, b) => b.qty - a.qty);
+  const shown = plist.filter(r => !Q || r.name.toLowerCase().includes(Q.toLowerCase()));
 
   const kpi = (icon, label, val, sub, accent) => `<div class="kpi-card" style="--accent-color:${accent}"><div class="kpi-icon">${icon}</div><div class="kpi-label">${label}</div><div class="kpi-value">${val}</div><div class="kpi-sub">${sub}</div></div>`;
-  const prodTable = (list, withTotal = true) => `<div class="table-wrap"><table class="data-table"><thead><tr><th>Product</th><th class="num">Quantity</th><th class="num">Value</th></tr></thead><tbody>${list.map(r => `<tr><td class="bold">${esc(r.name)}</td><td class="num">${num(r.qty)}</td><td class="num">${inr(r.value)}</td></tr>`).join('') || '<tr><td colspan="3" style="text-align:center;padding:20px;color:var(--ink-dim)">No production</td></tr>'}</tbody>${withTotal && list.length ? `<tfoot><tr style="font-weight:700;background:var(--bg)"><td>Total</td><td class="num">${num(list.reduce((s, r) => s + r.qty, 0))}</td><td class="num">${inr(list.reduce((s, r) => s + r.value, 0))}</td></tr></tfoot>` : ''}</table></div>`;
-
-  // per supervisor blocks
-  const supIds = [...new Set(mine.map(l => teamSup.get(l.team_id)))];
-  const blocks = supIds.map(sid => {
-    const s = D.sups.find(x => x.id === sid);
-    const ls = mine.filter(l => teamSup.get(l.team_id) === sid);
-    const t = sumDays(buildTeamDays(ls, D.teams, D.workers, D.rosters, D.summaries, D.products));
-    const m = new Map();
-    for (const l of ls) { const p = prod.get(l.product_id); const r = m.get(l.product_id) || { name: p?.name || 'Unknown', qty: 0, value: 0 }; r.qty += Number(l.quantity || 0); r.value += entryValue(l.quantity, l.weight, p); m.set(l.product_id, r); }
-    return { s, t, list: [...m.values()].sort((a, b) => b.qty - a.qty) };
-  }).sort((a, b) => b.t.value - a.t.value);
 
   body.innerHTML = `
     <div class="kpi-grid">
@@ -88,13 +80,14 @@ async function draw() {
       ${kpi('🧮', 'Labour % of Value', tot.value > 0 ? pct.toFixed(1) + '%' : '—', `${inr(tot.wage)} ÷ ${inr(tot.value)}`, 'var(--orange)')}
       ${kpi('📈', 'Value ÷ Labour', fmtX(tot.ratio), 'higher is better', 'var(--purple)')}
     </div>
-    <div class="section-head"><div><div class="section-title">Products made — ${fmtDate(SEL)}</div><div class="section-sub">${SUP ? esc(D.sups.find(s => s.id === SUP)?.name || '') : 'All supervisors'}</div></div></div>
-    ${prodTable(plist)}
-    ${SUP ? '' : `<div class="section-head"><div><div class="section-title">Supervisor-wise</div><div class="section-sub">Who made which product and how much</div></div></div>
-    ${blocks.map(b => `<div class="sup-block"><div class="sup-head"><b>${esc(b.s?.name || 'Supervisor')}</b><span>${num(b.t.units)} units · ${inr(b.t.value)} value · labour ${inr(b.t.wage)} (${b.t.value > 0 ? (b.t.wage / b.t.value * 100).toFixed(1) + '%' : '—'})</span></div>${prodTable(b.list, false)}</div>`).join('') || '<div class="state-msg">No production on this day</div>'}`}`;
+    <div class="section-head"><div><div class="section-title">Products made — ${fmtDate(SEL)}</div><div class="section-sub">${SUP ? esc(D.sups.find(s => s.id === SUP)?.name || '') : 'All supervisors'} · ${num(tot.units)} units · ${inr(tot.value)}</div></div></div>
+    <div class="card" style="margin-bottom:12px;"><input id="m-q" placeholder="Search product…" value="${esc(Q)}" autocomplete="off" style="width:100%;padding:9px 10px;border:1px solid var(--border-strong);border-radius:8px;font-size:14px;box-sizing:border-box;" /></div>
+    <div class="inv-grid">${shown.map(r => `<div class="inv-card"><div class="prod-name">${esc(r.name)}</div><div class="inv-stat"><span class="lbl" style="font-weight:600;">Total made</span><span class="val" style="color:var(--primary);font-size:18px;">${num(r.qty)}</span></div><div class="inv-stat"><span class="lbl">Value</span><span class="val">${inr(r.value)}</span></div></div>`).join('') || '<div class="state-msg">No production found</div>'}</div>`;
+  const qi = $('m-q');
+  qi.oninput = () => { Q = qi.value; const pos = qi.selectionStart; draw(false); const n = $('m-q'); n.focus(); n.setSelectionRange(pos, pos); };
 }
 
-async function refresh() { try { await draw(); } catch (e) { $('m-body').innerHTML = `<div class="state-msg" style="color:#b91c1c">Error: ${esc(e.message)}</div>`; } }
+async function refresh() { try { await draw(true); } catch (e) { $('m-body').innerHTML = `<div class="state-msg" style="color:#b91c1c">Error: ${esc(e.message)}</div>`; } }
 
 requireLogin().then(async me => {
   if (!me.manager && !me.admin) return blockedScreen('Master access only');
