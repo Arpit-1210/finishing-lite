@@ -1,3 +1,4 @@
+import { entryValue } from '../../lib/value.js';
 import { supabase } from '../../lib/supabase.js';
 import { istToday } from '../../lib/roster.js';
 import { closeDays } from '../../lib/dayclose.js';
@@ -6,7 +7,7 @@ import { inr, num, esc, fmtDate, teamName } from '../../lib/calc.js';
 export async function renderProductionLog(root) {
   const TODAY = istToday();
   const weekAgo = new Date(Date.now() + 5.5 * 3600 * 1000 - 6 * 86400000).toISOString().slice(0, 10);
-  const [sr, tr, pr] = await Promise.all([supabase.from('fin_supervisors').select('*').order('name'), supabase.from('fin_teams').select('*'), supabase.from('fin_products').select('id,name,selling_price')]);
+  const [sr, tr, pr] = await Promise.all([supabase.from('fin_supervisors').select('*').order('name'), supabase.from('fin_teams').select('*'), supabase.from('fin_products').select('*')]);
   const sups = sr.data || [], teams = tr.data || [], prods = new Map((pr.data || []).map(p => [p.id, p]));
   root.innerHTML = `
     <div class="card" style="margin-bottom:16px;display:flex;gap:10px;flex-wrap:wrap;align-items:end">
@@ -21,7 +22,7 @@ export async function renderProductionLog(root) {
     const list = (data || []).filter(l => !sf || teams.find(t => t.id === l.team_id)?.supervisor_id === sf);
     root.querySelector('#pl-body').innerHTML = `<div class="table-wrap"><table class="data-table"><thead><tr><th>Date</th><th>Supervisor</th><th>Team</th><th>Product</th><th class="num">Qty</th><th class="num">Value</th><th></th></tr></thead><tbody>${list.map(l => {
       const t = teams.find(x => x.id === l.team_id), p = prods.get(l.product_id);
-      return `<tr><td>${fmtDate(l.production_date)}</td><td>${esc(sups.find(s => s.id === t?.supervisor_id)?.name || '')}</td><td>${esc(teamName(t))}</td><td class="bold">${esc(p?.name || '—')}</td><td class="num">${num(l.quantity)}</td><td class="num">${inr(l.quantity * (p?.selling_price || 0))}</td><td><button class="btn btn-sm" data-del="${l.id}" data-date="${l.production_date}">Delete</button></td></tr>`;
+      return `<tr><td>${fmtDate(l.production_date)}</td><td>${esc(sups.find(s => s.id === t?.supervisor_id)?.name || '')}</td><td>${esc(teamName(t))}</td><td class="bold">${esc(p?.name || '—')}</td><td class="num">${num(l.quantity)}</td><td class="num">${inr(entryValue(l.quantity, l.weight, p))}</td><td><button class="btn btn-sm" data-del="${l.id}" data-date="${l.production_date}">Delete</button></td></tr>`;
     }).join('') || '<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--ink-dim)">No entries</td></tr>'}</tbody></table></div>`;
     root.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
       if (!confirm('Delete this entry?')) return;

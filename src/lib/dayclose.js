@@ -23,8 +23,8 @@ export async function loadMonthly(supabase, supervisorId = null) {
   const today = istToday();
   const [summaries, lr, pr, tr, wr, rosters] = await Promise.all([
     fetchSummaries(supabase),
-    supabase.from('fin_production_log').select('team_id, product_id, production_date, quantity').eq('production_date', today).limit(5000),
-    supabase.from('fin_products').select('id, selling_price'),
+    supabase.from('fin_production_log').select('*').eq('production_date', today).limit(5000),
+    supabase.from('fin_products').select('*'),
     supabase.from('fin_teams').select('*'),
     supabase.from('workers').select('name, daily_rate'),
     fetchRosterRows(supabase),

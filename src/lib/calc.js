@@ -1,3 +1,4 @@
+import { entryValue } from './value.js';
 // Finishing has no weight. Performance = value of goods produced ÷ labour cost.
 // Labour cost for one team on one day = sum of THAT DAY's roster members' daily_rate × OVERTIME,
 // counted ONCE per team per day (not per production entry).
@@ -19,7 +20,7 @@ export const teamName = t => t?.name || 'Team ' + (t?.team_number ?? '—');
  */
 export function buildTeamDays(logs, teams, workers, rosterRows = [], summaries = [], products = []) {
   const rate = new Map(workers.map(w => [w.name, Number(w.daily_rate || 0)]));
-  const price = new Map(products.map(p => [p.id, Number(p.selling_price || 0)]));
+  const prodMap = new Map(products.map(p => [p.id, p]));
   const teamMap = new Map(teams.map(t => [t.id, t]));
   const idx = rosterIndex(rosterRows);
   const frozen = new Map();
@@ -37,7 +38,7 @@ export function buildTeamDays(logs, teams, workers, rosterRows = [], summaries =
       rows.set(key, r);
     }
     r.units += Number(l.quantity || 0);
-    r.value += Number(l.quantity || 0) * (price.get(l.product_id) || 0);
+    r.value += entryValue(l.quantity, l.weight, prodMap.get(l.product_id));
   }
   return [...rows.values()].map(r => ({ ...r, ratio: r.wage > 0 ? r.value / r.wage : 0 }));
 }

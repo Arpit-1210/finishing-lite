@@ -135,11 +135,13 @@ begin
     from (
       select l.team_id::text as team_id, max(coalesce(tm.name, 'Team ' || tm.team_number)) as team,
              sum(l.quantity) as units,
-             sum(l.quantity * coalesce(p.selling_price, 0)) as value,
+             sum(case p.pricing_unit when 'kg' then coalesce(l.weight, 0) * coalesce(p.selling_price, 0)
+                                     when 'set' then l.quantity / greatest(coalesce(p.set_size, 1), 1) * coalesce(p.selling_price, 0)
+                                     else l.quantity * coalesce(p.selling_price, 0) end) as value,
              coalesce((select sum(w.daily_rate) from workers w
-                       where w.name = any ((select r.members from fin_team_rosters r
+                       where w.name = any (coalesce((select r.members from fin_team_rosters r
                                             where r.team_id = l.team_id::text and r.roster_date <= d
-                                            order by r.roster_date desc limit 1))), 0) * p_mult as wage
+                                            order by r.roster_date desc limit 1), array[]::text[]))), 0) * p_mult as wage
       from fin_production_log l
       join fin_teams tm on tm.id = l.team_id
       left join fin_products p on p.id = l.product_id

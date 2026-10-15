@@ -1,6 +1,7 @@
 import './styles/base.css';
 import { supabase, HAS_KEYS } from './lib/supabase.js';
 import { requireLogin, blockedScreen } from './lib/auth.js';
+import { entryValue, isKg, priceLabel } from './lib/value.js';
 import { istToday, fetchRosterRows, rosterIndex, membersOn, conflictTeam, withRoster, saveRoster, hasExact, teamsForDay, membersForDay } from './lib/roster.js';
 import { buildTeamDays, sumDays, fetchSummaries, inr, num, fmtX, esc, fmtDate, teamName } from './lib/calc.js';
 import { startAutoClose, closeDays, loadMonthly, monthlyTableHTML } from './lib/dayclose.js';
@@ -133,23 +134,31 @@ function drawProd() {
       <div class="field"><label>Product</label><input id="p-prod" list="prod-list" placeholder="Type to search product…" autocomplete="off" /><datalist id="prod-list">${D.products.map(p => `<option value="${esc(p.name)}"></option>`).join('')}</datalist></div>
       <div class="field-row">
         <div class="field"><label>Quantity</label><input id="p-qty" type="number" inputmode="numeric" min="1" step="1" placeholder="0" /></div>
-        <div class="field"><label>Time (optional)</label><input id="p-time" type="time" /></div>
+        <div class="field"><label>Weight kg <span id="p-wt-need" style="color:#b45309"></span></label><input id="p-wt" type="number" inputmode="decimal" min="0" step="0.1" placeholder="only for per-kg items" /></div>
       </div>
+      <div class="field"><label>Time (optional)</label><input id="p-time" type="time" /></div>
+      <div id="p-price-note" style="font-size:12px;color:#667085;margin:-4px 0 10px"></div>
       <button class="btn-primary" id="p-save" style="width:100%">Save Entry</button>
     </div>
     <div class="section-head"><div class="section-title">Entries — ${esc(teamName(teams.find(t => t.id === teamId)))} · ${fmtDate(SEL)}</div></div>
     ${day ? `<div class="kpi-grid"><div class="kpi-card"><div class="kpi-label">Units</div><div class="kpi-value">${num(day.units)}</div></div><div class="kpi-card"><div class="kpi-label">Value</div><div class="kpi-value">${inr(day.value)}</div></div><div class="kpi-card"><div class="kpi-label">Labour</div><div class="kpi-value">${inr(day.wage)}</div></div><div class="kpi-card"><div class="kpi-label">Value ÷ Labour</div><div class="kpi-value">${fmtX(day.ratio)}</div></div></div>` : ''}
     ${entriesTable(entries)}`;
   $('prod-content').querySelectorAll('.team-tab').forEach(b => b.onclick = () => { teamId = b.dataset.t; drawProd(); });
+  const prodNote = () => {
+    const p = D.products.find(x => x.name.toLowerCase() === $('p-prod').value.trim().toLowerCase());
+    $('p-price-note').textContent = p ? `${inr(p.selling_price)} ${priceLabel(p)}` : '';
+    $('p-wt-need').textContent = p && isKg(p) ? '(required)' : '';
+  };
+  $('p-prod').addEventListener('input', prodNote);
   $('p-save').onclick = saveEntry;
   wireDelete($('prod-content'));
 }
 function entriesTable(list, showTeam = false) {
   if (!list.length) return '<div class="state-msg">No entries</div>';
-  const price = new Map(D.products.map(p => [p.id, Number(p.selling_price || 0)]));
+  const prodMap = new Map(D.products.map(p => [p.id, p]));
   return `<div class="table-wrap"><table class="dt"><thead><tr><th>Date</th>${showTeam ? '<th>Team</th>' : ''}<th>Product</th><th class="num">Qty</th><th class="num">Value</th><th></th></tr></thead><tbody>${list.map(l => {
     const t = D.teams.find(x => x.id === l.team_id);
-    return `<tr><td>${fmtDate(l.production_date)}${l.production_time ? ' · ' + esc(l.production_time) : ''}</td>${showTeam ? `<td>${esc(teamName(t))}</td>` : ''}<td class="bold">${esc(prodName(l.product_id))}</td><td class="num">${num(l.quantity)}</td><td class="num">${inr(l.quantity * (price.get(l.product_id) || 0))}</td><td><button class="btn-ghost" data-del="${l.id}" style="padding:4px 10px">Delete</button></td></tr>`;
+    return `<tr><td>${fmtDate(l.production_date)}${l.production_time ? ' · ' + esc(l.production_time) : ''}</td>${showTeam ? `<td>${esc(teamName(t))}</td>` : ''}<td class="bold">${esc(prodName(l.product_id))}</td><td class="num">${num(l.quantity)}${l.weight ? `<div style="font-size:11px;color:#667085">${num(l.weight)} kg</div>` : ''}</td><td class="num">${inr(entryValue(l.quantity, l.weight, prodMap.get(l.product_id)))}</td><td><button class="btn-ghost" data-del="${l.id}" style="padding:4px 10px">Delete</button></td></tr>`;
   }).join('')}</tbody></table></div>`;
 }
 function wireDelete(root) {
@@ -166,9 +175,11 @@ async function saveEntry() {
   const p = D.products.find(x => x.name.toLowerCase() === name.toLowerCase());
   if (!p) return toast('Pick a product from the list', 'error');
   if (!(qty > 0)) return toast('Enter quantity', 'error');
+  const wt = parseFloat($('p-wt').value);
+  if (isKg(p) && !(wt > 0)) return toast('This product is priced per kg. Enter the weight', 'error');
   if (!teamId || !membersToday(teamId).length) return toast('Add workers to this team for this day first (Teams page)', 'error');
   const btn = $('p-save'); btn.disabled = true;
-  const { error } = await supabase.from('fin_production_log').insert({ team_id: teamId, product_id: p.id, quantity: qty, production_date: SEL, production_time: $('p-time').value || null });
+  const { error } = await supabase.from('fin_production_log').insert({ team_id: teamId, product_id: p.id, quantity: qty, production_date: SEL, production_time: $('p-time').value || null, ...(wt > 0 ? { weight: wt } : {}) });
   btn.disabled = false;
   if (error) return toast(error.message, 'error');
   toast('Saved ✓'); await refreshClose(SEL); rerender(true);

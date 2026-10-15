@@ -44,7 +44,7 @@ export async function renderDashboard(root) {
     const from = new Date(Date.now() + 5.5 * 3600 * 1000 - days * 86400000).toISOString().slice(0, 10);
     const [lr, pr, tr, sr, wr, rosters, summaries, monthly] = await Promise.all([
       supabase.from('fin_production_log').select('*').gte('production_date', from).lte('production_date', TODAY).limit(20000),
-      supabase.from('fin_products').select('id, selling_price'),
+      supabase.from('fin_products').select('*'),
       supabase.from('fin_teams').select('*'),
       supabase.from('fin_supervisors').select('*'),
       supabase.from('workers').select('name, daily_rate'),
