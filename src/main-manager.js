@@ -95,7 +95,7 @@ async function draw() {
 async function refresh() { try { await draw(); } catch (e) { $('m-body').innerHTML = `<div class="state-msg" style="color:#b91c1c">Error: ${esc(e.message)}</div>`; } }
 
 requireLogin().then(async me => {
-  if (!me.manager && !me.admin) return blockedScreen('Manager access only');
+  if (!me.manager && !me.admin) return blockedScreen('Master access only');
   $('mgr-logout').onclick = async () => { await supabase.auth.signOut(); location.reload(); };
   const d = $('m-date'); d.value = SEL; d.max = TODAY;
   d.onchange = () => { if (!d.value) return; SEL = d.value > TODAY ? TODAY : d.value; d.value = SEL; refresh(); };

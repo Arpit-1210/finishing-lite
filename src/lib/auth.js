@@ -64,7 +64,7 @@ export async function requireLogin() {
   addLogout(email);
   supabase.auth.onAuthStateChange((ev) => { if (ev === 'SIGNED_OUT') location.reload(); });
   const admin = email === 'admin@gfpl.com';
-  const manager = email === 'manager@gfpl.com';
+  const manager = email === 'master@gfpl.com';
   let supervisor = null;
   if (!admin && !manager) {
     const { data: s } = await supabase.from('fin_supervisors').select('*').eq('email', email).maybeSingle();
