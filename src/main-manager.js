@@ -5,6 +5,7 @@ import { requireLogin, blockedScreen } from './lib/auth.js';
 import { istToday, fetchRosterRows } from './lib/roster.js';
 import { buildTeamDays, sumDays, fetchSummaries, inr, num, fmtX, esc, fmtDate, teamName } from './lib/calc.js';
 import { entryValue } from './lib/value.js';
+import { renderInventory } from './pages/owner/inventory.js';
 
 const $ = id => document.getElementById(id);
 const TODAY = istToday();
@@ -22,6 +23,7 @@ body.mgr{margin:0;background:var(--bg,#f4f6f9);font-family:Inter,system-ui,sans-
 .mgr-filters{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end;margin-bottom:16px;padding:14px 16px}
 .mgr-filters label{display:block;font-size:12px;font-weight:600;color:#667085;margin-bottom:5px}
 .mgr-filters input,.mgr-filters select{padding:9px 10px;border:1px solid #d0d5dd;border-radius:8px;font-size:15px;background:#fff;min-width:160px}
+.mgr-tabs{display:flex;gap:8px;margin-bottom:12px}.mgr-tab{flex:1;border:1px solid #d0d5dd;background:#fff;border-radius:10px;padding:10px;font-size:14px;font-weight:600;color:#667085;cursor:pointer}.mgr-tab.on{background:#1967D2;border-color:#1967D2;color:#fff}
 .sup-block{margin-bottom:14px}
 .sup-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}
 .sup-head b{font-size:15px}.sup-head span{font-size:12px;color:#667085}
@@ -101,6 +103,13 @@ requireLogin().then(async me => {
   d.onchange = () => { if (!d.value) return; SEL = d.value > TODAY ? TODAY : d.value; d.value = SEL; refresh(); };
   $('m-today').onclick = () => { SEL = TODAY; d.value = SEL; refresh(); };
   $('m-sup').onchange = e => { SUP = e.target.value; refresh(); };
+  let invLoaded = false;
+  document.querySelectorAll('.mgr-tab').forEach(b => b.onclick = async () => {
+    document.querySelectorAll('.mgr-tab').forEach(x => x.classList.toggle('on', x === b));
+    const inv = b.dataset.t === 'inv';
+    $('m-filters').style.display = inv ? 'none' : ''; $('m-body').style.display = inv ? 'none' : ''; $('m-inv').style.display = inv ? '' : 'none';
+    if (inv && !invLoaded) { invLoaded = true; try { await renderInventory($('m-inv')); } catch (e) { $('m-inv').innerHTML = `<div class="state-msg" style="color:#b91c1c">Error: ${esc(e.message)}</div>`; } }
+  });
   await loadAll(); await refresh();
   supabase.channel('fin-mgr').on('postgres_changes', { event: '*', schema: 'public', table: 'fin_production_log' }, () => refresh()).subscribe();
 });

@@ -17,11 +17,13 @@
     <div class="mgr-actions"><button type="button" class="refresh-btn" onclick="location.reload()">&#8635; Refresh</button><button type="button" class="refresh-btn" id="mgr-logout">Logout</button></div>
   </header>
   <main class="mgr-main">
-    <div class="mgr-filters card">
+    <div class="mgr-tabs"><button type="button" class="mgr-tab on" data-t="day">📅 Daily report</button><button type="button" class="mgr-tab" data-t="inv">📦 Inventory</button></div>
+    <div class="mgr-filters card" id="m-filters">
       <div><label for="m-date">📅 Date</label><input type="date" id="m-date" /></div>
       <div><label for="m-sup">👤 Supervisor</label><select id="m-sup"></select></div>
       <button type="button" class="range-btn" id="m-today">Today</button>
     </div>
+    <div id="m-inv" style="display:none"></div>
     <div id="m-body"><div class="state-msg">Loading…</div></div>
   </main>
   <div class="toast" id="toast"><span class="icon" id="toast-icon"></span><span id="toast-msg"></span></div>
