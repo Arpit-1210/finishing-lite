@@ -2,7 +2,7 @@ import './styles/base.css';
 import './styles/owner.css';
 import { supabase } from './lib/supabase.js';
 import { requireLogin, blockedScreen } from './lib/auth.js';
-import { istToday, fetchRosterRows } from './lib/roster.js';
+import { istToday, fetchRosterRows, rosterIndex, teamsForDay, membersForDay } from './lib/roster.js';
 import { buildTeamDays, sumDays, fetchSummaries, inr, num, fmtX, esc, fmtDate, teamName } from './lib/calc.js';
 import { entryValue } from './lib/value.js';
 import { renderInventory } from './pages/owner/inventory.js';
@@ -83,8 +83,38 @@ async function draw(force = false) {
     <div class="section-head"><div><div class="section-title">Products made — ${fmtDate(SEL)}</div><div class="section-sub">${SUP ? esc(D.sups.find(s => s.id === SUP)?.name || '') : 'All supervisors'} · ${num(tot.units)} units${MONEY ? ' · ' + inr(tot.value) : ''}</div></div></div>
     <div class="card" style="margin-bottom:12px;"><input id="m-q" placeholder="Search product…" value="${esc(Q)}" autocomplete="off" style="width:100%;padding:9px 10px;border:1px solid var(--border-strong);border-radius:8px;font-size:14px;box-sizing:border-box;" /></div>
     <div class="inv-grid">${shown.map(r => `<div class="inv-card"><div class="prod-name">${esc(r.name)}</div><div class="inv-stat"><span class="lbl" style="font-weight:600;">Total made</span><span class="val" style="color:var(--primary);font-size:18px;">${num(r.qty)}</span></div>${MONEY ? `<div class="inv-stat"><span class="lbl">Value</span><span class="val">${inr(r.value)}</span></div>` : ''}</div>`).join('') || '<div class="state-msg">No production found</div>'}</div>`;
+  drawTeamsTab(mine, teamSup, prod);
   const qi = $('m-q');
   qi.oninput = () => { Q = qi.value; const pos = qi.selectionStart; draw(false); const n = $('m-q'); n.focus(); n.setSelectionRange(pos, pos); };
+}
+
+// Third section: which supervisor made which team, with which labourers, and which products (no money)
+function drawTeamsTab(mine, teamSup, prod) {
+  const idx = rosterIndex(D.rosters);
+  const supTeams = D.teams.filter(t => !SUP || t.supervisor_id === SUP);
+  const dayT = teamsForDay(idx, supTeams, SEL, mine);
+  const sups = D.sups.filter(s => !SUP || s.id === SUP);
+  const blocks = sups.map(s => {
+    const ts = dayT.filter(t => t.supervisor_id === s.id);
+    if (!ts.length) return '';
+    const cards = ts.map(t => {
+      const ls = mine.filter(l => l.team_id === t.id);
+      const members = membersForDay(idx, t.id, SEL, ls.length > 0);
+      const by = new Map();
+      for (const l of ls) { const p = prod.get(l.product_id); by.set(l.product_id, { name: p?.name || 'Unknown', qty: (by.get(l.product_id)?.qty || 0) + Number(l.quantity || 0) }); }
+      const plist = [...by.values()].sort((a, b) => b.qty - a.qty);
+      const units = plist.reduce((a, r) => a + r.qty, 0);
+      return `<div class="card" style="margin-bottom:12px;padding:14px 16px">
+        <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:8px"><b>${esc(teamName(t))}</b><span style="font-size:12px;color:#667085">${members.length} labourer${members.length === 1 ? '' : 's'} · ${num(units)} units</span></div>
+        <div style="font-size:12px;font-weight:600;color:#667085;margin-bottom:5px">Labourers</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">${members.map(m => `<span style="background:#eaf1fc;color:#1967D2;border-radius:999px;padding:4px 10px;font-size:13px;font-weight:600">${esc(m)}</span>`).join('') || '<span style="color:#667085;font-size:13px">No labourers listed</span>'}</div>
+        <div style="font-size:12px;font-weight:600;color:#667085;margin-bottom:5px">Products made</div>
+        <div class="table-wrap"><table class="data-table"><tbody>${plist.map(r => `<tr><td class="bold">${esc(r.name)}</td><td class="num">${num(r.qty)}</td></tr>`).join('') || '<tr><td style="color:#667085">Nothing logged yet</td></tr>'}</tbody></table></div>
+      </div>`;
+    }).join('');
+    return `<div class="section-head"><div><div class="section-title">${esc(s.name)}</div><div class="section-sub">${ts.length} team${ts.length === 1 ? '' : 's'} · ${fmtDate(SEL)}</div></div></div>${cards}`;
+  }).join('');
+  $('m-teams').innerHTML = blocks || `<div class="state-msg">No team made on ${fmtDate(SEL)}</div>`;
 }
 
 async function refresh() { try { await draw(true); } catch (e) { $('m-body').innerHTML = `<div class="state-msg" style="color:#b91c1c">Error: ${esc(e.message)}</div>`; } }
@@ -100,8 +130,8 @@ requireLogin().then(async me => {
   let invLoaded = false;
   document.querySelectorAll('.mgr-tab').forEach(b => b.onclick = async () => {
     document.querySelectorAll('.mgr-tab').forEach(x => x.classList.toggle('on', x === b));
-    const inv = b.dataset.t === 'inv';
-    $('m-filters').style.display = inv ? 'none' : ''; $('m-body').style.display = inv ? 'none' : ''; $('m-inv').style.display = inv ? '' : 'none';
+    const inv = b.dataset.t === 'inv', tm = b.dataset.t === 'teams';
+    $('m-filters').style.display = inv ? 'none' : ''; $('m-body').style.display = (inv || tm) ? 'none' : ''; $('m-inv').style.display = inv ? '' : 'none'; $('m-teams').style.display = tm ? '' : 'none';
     if (inv && !invLoaded) { invLoaded = true; try { await renderInventory($('m-inv'), { money: MONEY }); } catch (e) { $('m-inv').innerHTML = `<div class="state-msg" style="color:#b91c1c">Error: ${esc(e.message)}</div>`; } }
   });
   await loadAll(); await refresh();
