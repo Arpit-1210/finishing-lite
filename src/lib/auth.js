@@ -64,13 +64,14 @@ export async function requireLogin() {
   addLogout(email);
   supabase.auth.onAuthStateChange((ev) => { if (ev === 'SIGNED_OUT') location.reload(); });
   const admin = email === 'admin@gfpl.com';
-  const manager = email === 'master@gfpl.com';
+  const owner2 = email === 'owner@gfpl.com'; // read-only, sees values
+  const manager = email === 'master@gfpl.com' || owner2;
   let supervisor = null;
   if (!admin && !manager) {
     const { data: s } = await supabase.from('fin_supervisors').select('*').eq('email', email).maybeSingle();
     supervisor = s || null;
   }
-  return { email, admin, manager, supervisor };
+  return { email, admin, manager, owner2, supervisor };
 }
 
 export function blockedScreen(msg) {

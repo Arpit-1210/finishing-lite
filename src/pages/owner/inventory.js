@@ -5,7 +5,8 @@ import { entryValue } from '../../lib/value.js';
 
 let channel = null;
 
-export async function renderInventory(root) {
+export async function renderInventory(root, opts = {}) {
+  const money = opts.money !== false; // false = quantities only, no values
   if (channel) { supabase.removeChannel(channel); channel = null; }
   const TODAY = istToday();
   const monthStart = TODAY.slice(0, 7) + '-01';
@@ -43,15 +44,15 @@ export async function renderInventory(root) {
       <div class="inv-stat"><span class="lbl">This week</span><span class="val">${num(r.week)}</span></div>
       <div class="inv-stat"><span class="lbl">This month</span><span class="val">${num(r.month)}</span></div>
       <div class="inv-stat"><span class="lbl" style="font-weight:600;">Total</span><span class="val" style="color:var(--primary);font-size:15px;">${num(r.total)}</span></div>
-      <div class="inv-stat"><span class="lbl">Value</span><span class="val">${inr(r.value)}</span></div></div>`).join('')
+      ${money ? `<div class="inv-stat"><span class="lbl">Value</span><span class="val">${inr(r.value)}</span></div>` : ''}</div>`).join('')
       || '<div class="state-msg">No production data yet</div>';
-    const trs = list.map(r => `<tr><td class="bold">${esc(r.name)}</td><td class="num">${num(r.today)}</td><td class="num">${num(r.week)}</td><td class="num">${num(r.month)}</td><td class="num" style="font-weight:700;">${num(r.total)}</td><td class="num" style="color:var(--green);font-weight:600;">${inr(r.value)}</td></tr>`).join('')
+    const trs = list.map(r => `<tr><td class="bold">${esc(r.name)}</td><td class="num">${num(r.today)}</td><td class="num">${num(r.week)}</td><td class="num">${num(r.month)}</td><td class="num" style="font-weight:700;">${num(r.total)}</td>${money ? `<td class="num" style="color:var(--green);font-weight:600;">${inr(r.value)}</td>` : ''}</tr>`).join('')
       || '<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--ink-dim);">No data</td></tr>';
     const keep = root.querySelector('#inv-q')?.value ?? q;
     root.innerHTML = `
       <div class="kpi-grid">
         <div class="kpi-card" style="--accent-color:var(--primary)"><div class="kpi-icon">📦</div><div class="kpi-label">Total Inventory</div><div class="kpi-value">${num(all.total)}</div><div class="kpi-sub">units finished, all time</div></div>
-        <div class="kpi-card" style="--accent-color:var(--green)"><div class="kpi-icon">💰</div><div class="kpi-label">Inventory Value</div><div class="kpi-value">${inr(all.value)}</div><div class="kpi-sub">at selling price</div></div>
+        ${money ? `<div class="kpi-card" style="--accent-color:var(--green)"><div class="kpi-icon">💰</div><div class="kpi-label">Inventory Value</div><div class="kpi-value">${inr(all.value)}</div><div class="kpi-sub">at selling price</div></div>` : ''}
         <div class="kpi-card" style="--accent-color:var(--orange)"><div class="kpi-icon">🗓️</div><div class="kpi-label">This Month</div><div class="kpi-value">${num(all.month)}</div><div class="kpi-sub">units</div></div>
         <div class="kpi-card" style="--accent-color:var(--purple)"><div class="kpi-icon">🏭</div><div class="kpi-label">Today</div><div class="kpi-value">${num(all.today)}</div><div class="kpi-sub">units</div></div>
         <div class="kpi-card" style="--accent-color:var(--red)"><div class="kpi-icon">🗂️</div><div class="kpi-label">Products</div><div class="kpi-value">${rows.length}</div><div class="kpi-sub">types finished</div></div>
@@ -61,9 +62,9 @@ export async function renderInventory(root) {
       <div class="inv-grid">${cards}</div>
       <div class="section-head"><div class="section-title">Product Breakdown</div></div>
       <div class="table-wrap"><table class="data-table">
-        <thead><tr><th>Product</th><th class="num">Today</th><th class="num">7 Days</th><th class="num">This Month</th><th class="num">Total</th><th class="num">Value</th></tr></thead>
+        <thead><tr><th>Product</th><th class="num">Today</th><th class="num">7 Days</th><th class="num">This Month</th><th class="num">Total</th>${money ? '<th class="num">Value</th>' : ''}</tr></thead>
         <tbody>${trs}</tbody>
-        ${list.length ? `<tfoot><tr style="font-weight:700;background:var(--bg);"><td>Total</td><td class="num">${num(list.reduce((s, r) => s + r.today, 0))}</td><td class="num">${num(list.reduce((s, r) => s + r.week, 0))}</td><td class="num">${num(list.reduce((s, r) => s + r.month, 0))}</td><td class="num">${num(list.reduce((s, r) => s + r.total, 0))}</td><td class="num">${inr(list.reduce((s, r) => s + r.value, 0))}</td></tr></tfoot>` : ''}
+        ${list.length ? `<tfoot><tr style="font-weight:700;background:var(--bg);"><td>Total</td><td class="num">${num(list.reduce((s, r) => s + r.today, 0))}</td><td class="num">${num(list.reduce((s, r) => s + r.week, 0))}</td><td class="num">${num(list.reduce((s, r) => s + r.month, 0))}</td><td class="num">${num(list.reduce((s, r) => s + r.total, 0))}</td>${money ? `<td class="num">${inr(list.reduce((s, r) => s + r.value, 0))}</td>` : ''}</tr></tfoot>` : ''}
       </table></div>`;
     const inp = root.querySelector('#inv-q');
     inp.oninput = () => { q = inp.value; const pos = inp.selectionStart; draw(); const n = root.querySelector('#inv-q'); n.focus(); n.setSelectionRange(pos, pos); };

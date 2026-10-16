@@ -9,7 +9,7 @@ import { renderInventory } from './pages/owner/inventory.js';
 
 const $ = id => document.getElementById(id);
 const TODAY = istToday();
-let SEL = TODAY, SUP = '', Q = '';
+let SEL = TODAY, SUP = '', Q = '', MONEY = false;
 let D = { sups: [], teams: [], products: [], workers: [], rosters: [], summaries: [] };
 
 const css = document.createElement('style');
@@ -75,14 +75,14 @@ async function draw(force = false) {
   body.innerHTML = `
     <div class="kpi-grid">
       ${kpi('🏭', 'Units Made', num(tot.units), `${plist.length} products · ${working} team${working === 1 ? '' : 's'} working`, 'var(--primary)')}
-      ${kpi('💰', 'Value Produced', inr(tot.value), 'at selling price', 'var(--green)')}
-      ${kpi('👷', 'Labour Cost', inr(tot.wage), '1.5× overtime included', 'var(--red)')}
-      ${kpi('🧮', 'Labour % of Value', tot.value > 0 ? pct.toFixed(1) + '%' : '—', `${inr(tot.wage)} ÷ ${inr(tot.value)}`, 'var(--orange)')}
-      ${kpi('📈', 'Value ÷ Labour', fmtX(tot.ratio), 'higher is better', 'var(--purple)')}
+      ${MONEY ? kpi('💰', 'Value Produced', inr(tot.value), 'at selling price', 'var(--green)') : kpi('📦', 'Products', num(plist.length), 'types made', 'var(--green)')}
+      ${MONEY ? kpi('👷', 'Labour Cost', inr(tot.wage), '1.5× overtime included', 'var(--red)') : ''}
+      ${MONEY ? kpi('🧮', 'Labour % of Value', tot.value > 0 ? pct.toFixed(1) + '%' : '—', `${inr(tot.wage)} ÷ ${inr(tot.value)}`, 'var(--orange)') : ''}
+      ${MONEY ? kpi('📈', 'Value ÷ Labour', fmtX(tot.ratio), 'higher is better', 'var(--purple)') : ''}
     </div>
-    <div class="section-head"><div><div class="section-title">Products made — ${fmtDate(SEL)}</div><div class="section-sub">${SUP ? esc(D.sups.find(s => s.id === SUP)?.name || '') : 'All supervisors'} · ${num(tot.units)} units · ${inr(tot.value)}</div></div></div>
+    <div class="section-head"><div><div class="section-title">Products made — ${fmtDate(SEL)}</div><div class="section-sub">${SUP ? esc(D.sups.find(s => s.id === SUP)?.name || '') : 'All supervisors'} · ${num(tot.units)} units${MONEY ? ' · ' + inr(tot.value) : ''}</div></div></div>
     <div class="card" style="margin-bottom:12px;"><input id="m-q" placeholder="Search product…" value="${esc(Q)}" autocomplete="off" style="width:100%;padding:9px 10px;border:1px solid var(--border-strong);border-radius:8px;font-size:14px;box-sizing:border-box;" /></div>
-    <div class="inv-grid">${shown.map(r => `<div class="inv-card"><div class="prod-name">${esc(r.name)}</div><div class="inv-stat"><span class="lbl" style="font-weight:600;">Total made</span><span class="val" style="color:var(--primary);font-size:18px;">${num(r.qty)}</span></div><div class="inv-stat"><span class="lbl">Value</span><span class="val">${inr(r.value)}</span></div></div>`).join('') || '<div class="state-msg">No production found</div>'}</div>`;
+    <div class="inv-grid">${shown.map(r => `<div class="inv-card"><div class="prod-name">${esc(r.name)}</div><div class="inv-stat"><span class="lbl" style="font-weight:600;">Total made</span><span class="val" style="color:var(--primary);font-size:18px;">${num(r.qty)}</span></div>${MONEY ? `<div class="inv-stat"><span class="lbl">Value</span><span class="val">${inr(r.value)}</span></div>` : ''}</div>`).join('') || '<div class="state-msg">No production found</div>'}</div>`;
   const qi = $('m-q');
   qi.oninput = () => { Q = qi.value; const pos = qi.selectionStart; draw(false); const n = $('m-q'); n.focus(); n.setSelectionRange(pos, pos); };
 }
@@ -91,6 +91,7 @@ async function refresh() { try { await draw(true); } catch (e) { $('m-body').inn
 
 requireLogin().then(async me => {
   if (!me.manager && !me.admin) return blockedScreen('Master access only');
+  MONEY = !!(me.owner2 || me.admin);
   $('mgr-logout').onclick = async () => { await supabase.auth.signOut(); location.reload(); };
   const d = $('m-date'); d.value = SEL; d.max = TODAY;
   d.onchange = () => { if (!d.value) return; SEL = d.value > TODAY ? TODAY : d.value; d.value = SEL; refresh(); };
@@ -101,7 +102,7 @@ requireLogin().then(async me => {
     document.querySelectorAll('.mgr-tab').forEach(x => x.classList.toggle('on', x === b));
     const inv = b.dataset.t === 'inv';
     $('m-filters').style.display = inv ? 'none' : ''; $('m-body').style.display = inv ? 'none' : ''; $('m-inv').style.display = inv ? '' : 'none';
-    if (inv && !invLoaded) { invLoaded = true; try { await renderInventory($('m-inv')); } catch (e) { $('m-inv').innerHTML = `<div class="state-msg" style="color:#b91c1c">Error: ${esc(e.message)}</div>`; } }
+    if (inv && !invLoaded) { invLoaded = true; try { await renderInventory($('m-inv'), { money: MONEY }); } catch (e) { $('m-inv').innerHTML = `<div class="state-msg" style="color:#b91c1c">Error: ${esc(e.message)}</div>`; } }
   });
   await loadAll(); await refresh();
   supabase.channel('fin-mgr').on('postgres_changes', { event: '*', schema: 'public', table: 'fin_production_log' }, () => refresh()).subscribe();
