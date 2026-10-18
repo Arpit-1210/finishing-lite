@@ -56,12 +56,23 @@ function showLogin() {
  * Resolves once signed in. Returns { email, admin, supervisor } where supervisor is the fin_supervisors row
  * for supervisor accounts (null for the owner).
  */
+// A flaky connection when the installed app wakes up must not look like "logged out".
+async function currentSession() {
+  for (let i = 0; i < 3; i++) {
+    try { const { data } = await supabase.auth.getSession(); if (data?.session) return data.session; } catch { /* retry */ }
+    if (i < 2) await new Promise(r => setTimeout(r, 1200));
+  }
+  return null;
+}
+
 export async function requireLogin() {
-  const { data } = await supabase.auth.getSession();
-  if (!data?.session) await showLogin();
-  const { data: u } = await supabase.auth.getUser();
-  const email = (u?.user?.email || '').toLowerCase();
+  let session = await currentSession();
+  if (!session) { await showLogin(); session = await currentSession(); }
+  let email = (session?.user?.email || '').toLowerCase();
+  if (!email) { try { const { data: u } = await supabase.auth.getUser(); email = (u?.user?.email || '').toLowerCase(); } catch { /* keep empty */ } }
   addLogout(email);
+  // keep the session alive when the installed app comes back to the foreground
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) supabase.auth.getSession().catch(() => {}); });
   supabase.auth.onAuthStateChange((ev) => { if (ev === 'SIGNED_OUT') location.reload(); });
   const admin = email === 'admin@gfpl.com';
   const owner2 = email === 'owner@gfpl.com'; // read-only, sees values

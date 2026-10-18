@@ -120,7 +120,8 @@ function drawTeamsTab(mine, teamSup, prod) {
 async function refresh() { try { await draw(true); } catch (e) { $('m-body').innerHTML = `<div class="state-msg" style="color:#b91c1c">Error: ${esc(e.message)}</div>`; } }
 
 requireLogin().then(async me => {
-  if (!me.manager && !me.admin) return blockedScreen('Master access only');
+  if (me.admin) { location.replace('/'); return; }   // admin has the full app; the master page is only for master/owner logins
+  if (!me.manager) return blockedScreen('Master access only');
   MONEY = !!(me.owner2 || me.admin);
   $('mgr-logout').onclick = async () => { await supabase.auth.signOut(); location.reload(); };
   const d = $('m-date'); d.value = SEL; d.max = TODAY;
