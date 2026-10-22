@@ -35,7 +35,8 @@ export function hasExact(index, teamId, date) {
 /** Teams that exist ON this day: saved for the day, or (old data) have production logged that day. */
 export function teamsForDay(index, teams, date, logs = []) {
   const logged = new Set(logs.filter(l => l.production_date === date).map(l => String(l.team_id)));
-  return teams.filter(t => hasExact(index, t.id, date) || logged.has(String(t.id)));
+  return teams.filter(t => hasExact(index, t.id, date) || logged.has(String(t.id)))
+    .sort((a, b) => (Number(a.team_number) || 0) - (Number(b.team_number) || 0)); // fixed order — renaming never moves a team
 }
 
 /** Members for the day. New days start blank; old days that were logged but never saved fall back to carry-forward. */
