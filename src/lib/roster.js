@@ -69,9 +69,11 @@ export async function saveRoster(supabase, teamId, date, members) {
   if (error) throw error;
 }
 
-/** One fixed order for teams everywhere: team number, then creation time, then id. Never depends on name or edits. */
+/** One fixed order for teams everywhere. Follows the number the supervisor SEES ("Team 3" -> 3); a team renamed to plain text keeps its team number's place. */
+const teamKey = (t) => { const m = String(t.name || '').match(/(\d+)\s*$/); return m ? Number(m[1]) : (Number(t.team_number) || 0); };
 export function teamOrder(a, b) {
-  return ((Number(a.team_number) || 0) - (Number(b.team_number) || 0))
+  return (teamKey(a) - teamKey(b))
+    || ((Number(a.team_number) || 0) - (Number(b.team_number) || 0))
     || String(a.created_at || '').localeCompare(String(b.created_at || ''))
     || String(a.id).localeCompare(String(b.id));
 }

@@ -2,7 +2,7 @@ import './styles/base.css';
 import { supabase, HAS_KEYS } from './lib/supabase.js';
 import { requireLogin, blockedScreen } from './lib/auth.js';
 import { entryValue, isKg, priceLabel } from './lib/value.js';
-import { istToday, fetchRosterRows, rosterIndex, membersOn, conflictTeam, withRoster, saveRoster, hasExact, teamsForDay, membersForDay } from './lib/roster.js';
+import { teamOrder, istToday, fetchRosterRows, rosterIndex, membersOn, conflictTeam, withRoster, saveRoster, hasExact, teamsForDay, membersForDay } from './lib/roster.js';
 import { buildTeamDays, sumDays, fetchSummaries, inr, num, fmtX, esc, fmtDate, teamName } from './lib/calc.js';
 import { startAutoClose, closeDays, loadMonthly, monthlyTableHTML } from './lib/dayclose.js';
 
@@ -46,7 +46,7 @@ async function loadLogs() {
   if (error) throw error;
   D.logs = data || [];
 }
-const myTeams = () => D.teams.filter(t => t.supervisor_id === supId);
+const myTeams = () => D.teams.filter(t => t.supervisor_id === supId).sort(teamOrder);
 const dayTeams = () => teamsForDay(rosterIndex(D.rosters), myTeams(), SEL, D.logs);
 const membersToday = tid => membersForDay(rosterIndex(D.rosters), tid, SEL, D.logs.some(l => l.team_id === tid && l.production_date === SEL));
 const supOf = t => D.sups.find(s => s.id === t.supervisor_id);
