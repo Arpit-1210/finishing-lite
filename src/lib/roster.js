@@ -36,7 +36,7 @@ export function hasExact(index, teamId, date) {
 export function teamsForDay(index, teams, date, logs = []) {
   const logged = new Set(logs.filter(l => l.production_date === date).map(l => String(l.team_id)));
   return teams.filter(t => hasExact(index, t.id, date) || logged.has(String(t.id)))
-    .sort((a, b) => (Number(a.team_number) || 0) - (Number(b.team_number) || 0)); // fixed order — renaming never moves a team
+    .sort(teamOrder); // fixed order — renaming never moves a team
 }
 
 /** Members for the day. New days start blank; old days that were logged but never saved fall back to carry-forward. */
@@ -67,4 +67,11 @@ export async function saveRoster(supabase, teamId, date, members) {
     { onConflict: 'team_id,roster_date' }
   );
   if (error) throw error;
+}
+
+/** One fixed order for teams everywhere: team number, then creation time, then id. Never depends on name or edits. */
+export function teamOrder(a, b) {
+  return ((Number(a.team_number) || 0) - (Number(b.team_number) || 0))
+    || String(a.created_at || '').localeCompare(String(b.created_at || ''))
+    || String(a.id).localeCompare(String(b.id));
 }
