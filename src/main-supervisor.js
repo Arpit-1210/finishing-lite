@@ -153,6 +153,17 @@ function drawProd() {
   };
   $('p-prod').addEventListener('input', prodNote);
   $('p-save').onclick = saveEntry;
+  // Keyboard: Enter / ↓ = next field, ↑ = previous, Enter on the last field = Save
+  const order = ['p-prod', 'p-qty', 'p-wt', 'p-time'];
+  order.forEach((id) => $(id).addEventListener('keydown', (e) => {
+    const k = e.key; if (k !== 'Enter' && k !== 'ArrowDown' && k !== 'ArrowUp') return;
+    if (id === 'p-prod' && k !== 'Enter' && !D.products.some(x => x.name.toLowerCase() === e.target.value.trim().toLowerCase())) return; // let the list open
+    e.preventDefault();
+    const i = order.indexOf(id);
+    if (k === 'ArrowUp') { if (i > 0) $(order[i - 1]).focus(); return; }
+    if (k === 'Enter' && i === order.length - 1) { saveEntry(); return; }
+    if (i < order.length - 1) $(order[i + 1]).focus();
+  }));
   wireDelete($('prod-content'));
 }
 function entriesTable(list, showTeam = false) {
@@ -184,7 +195,7 @@ async function saveEntry() {
   const { error } = await supabase.from('fin_production_log').insert({ team_id: teamId, product_id: p.id, quantity: qty, production_date: SEL, production_time: $('p-time').value || null, ...(wt > 0 ? { weight: wt } : {}) });
   btn.disabled = false;
   if (error) return toast(error.message, 'error');
-  toast('Saved ✓'); await refreshClose(SEL); rerender(true);
+  toast('Saved ✓'); await refreshClose(SEL); rerender(true); setTimeout(() => { const f = document.getElementById('p-prod'); if (f) f.focus(); }, 150);
 }
 
 // ── teams ──
