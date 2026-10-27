@@ -16,6 +16,10 @@ const STYLE = `
 .who{font-size:12px;color:#667085;margin-top:8px;word-break:break-all}
 `;
 
+// Remembers why the session ended, shown on the login screen so we can find the real cause.
+function dbg(msg) { try { const a = JSON.parse(localStorage.getItem('auth_dbg') || '[]'); a.push(new Date().toLocaleString('en-IN') + ' ' + msg); localStorage.setItem('auth_dbg', JSON.stringify(a.slice(-4))); } catch { /* ignore */ } }
+function dbgText() { try { return JSON.parse(localStorage.getItem('auth_dbg') || '[]').join(' | '); } catch { return ''; } }
+
 function addLogout(email) {
   const f = document.querySelector('.sidebar-footer');
   if (!f || f.querySelector('.logout-btn')) return;
@@ -67,13 +71,13 @@ async function currentSession() {
 
 export async function requireLogin() {
   let session = await currentSession();
-  if (!session) { await showLogin(); session = await currentSession(); }
+  if (!session) { let has = false; try { has = Object.keys(localStorage).some(k => k.startsWith('sb-')); } catch { /* ignore */ } dbg('no session at start; saved login on phone: ' + (has ? 'yes' : 'no')); await showLogin(); session = await currentSession(); }
   let email = (session?.user?.email || '').toLowerCase();
   if (!email) { try { const { data: u } = await supabase.auth.getUser(); email = (u?.user?.email || '').toLowerCase(); } catch { /* keep empty */ } }
   addLogout(email);
   // keep the session alive when the installed app comes back to the foreground
   document.addEventListener('visibilitychange', () => { if (!document.hidden) supabase.auth.getSession().catch(() => {}); });
-  supabase.auth.onAuthStateChange((ev) => { if (ev === 'SIGNED_OUT') location.reload(); });
+  supabase.auth.onAuthStateChange((ev) => { if (ev === 'SIGNED_OUT' || ev === 'TOKEN_REFRESHED') dbg(ev); if (ev === 'SIGNED_OUT') location.reload(); });
   const admin = email === 'admin@gfpl.com';
   const owner2 = email === 'owner@gfpl.com'; // read-only, sees values
   const manager = email === 'master@gfpl.com' || owner2;
