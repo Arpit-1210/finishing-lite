@@ -123,7 +123,7 @@ requireLogin().then(async me => {
   if (me.admin) { location.replace('/'); return; }   // admin has the full app; the master page is only for master/owner logins
   if (!me.manager) return blockedScreen('Master access only');
   MONEY = !!(me.owner2 || me.admin);
-  $('mgr-logout').onclick = async () => { await supabase.auth.signOut(); location.reload(); };
+  $('mgr-logout').onclick = async () => { await supabase.auth.signOut({ scope: 'local' }); location.reload(); };
   const d = $('m-date'); d.value = SEL; d.max = TODAY;
   d.onchange = () => { if (!d.value) return; SEL = d.value > TODAY ? TODAY : d.value; d.value = SEL; refresh(); };
   $('m-today').onclick = () => { SEL = TODAY; d.value = SEL; refresh(); };

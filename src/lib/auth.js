@@ -22,7 +22,7 @@ function addLogout(email) {
   const w = document.createElement('div'); w.className = 'who'; w.textContent = email;
   const b = document.createElement('button');
   b.className = 'logout-btn'; b.textContent = 'Logout';
-  b.onclick = async () => { await supabase.auth.signOut(); location.reload(); };
+  b.onclick = async () => { await supabase.auth.signOut({ scope: 'local' }); location.reload(); };
   f.appendChild(b); f.appendChild(w);
 }
 
@@ -86,5 +86,5 @@ export async function requireLogin() {
 }
 
 export function blockedScreen(msg) {
-  document.body.innerHTML = `<div style="font-family:Inter,system-ui,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:24px;text-align:center;color:#101828"><div><div style="font-size:40px">🔒</div><h2>${msg}</h2><p style="color:#667085">Ask the owner to check your login.</p><button onclick="(async()=>{const m=await import('/src/lib/supabase.js');await m.supabase.auth.signOut();location.reload()})()" style="margin-top:12px;padding:10px 18px;border-radius:8px;border:1px solid #d0d5dd;background:#fff;font-weight:600;cursor:pointer">Logout</button></div></div>`;
+  document.body.innerHTML = `<div style="font-family:Inter,system-ui,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:24px;text-align:center;color:#101828"><div><div style="font-size:40px">🔒</div><h2>${msg}</h2><p style="color:#667085">Ask the owner to check your login.</p><button onclick="(async()=>{const m=await import('/src/lib/supabase.js');await m.supabase.auth.signOut({ scope: 'local' });location.reload()})()" style="margin-top:12px;padding:10px 18px;border-radius:8px;border:1px solid #d0d5dd;background:#fff;font-weight:600;cursor:pointer">Logout</button></div></div>`;
 }
