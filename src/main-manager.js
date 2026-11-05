@@ -1,4 +1,5 @@
 import './styles/base.css';
+import { fetchAll } from './lib/fetchAll.js';
 import './styles/owner.css';
 import { supabase } from './lib/supabase.js';
 import { requireLogin, blockedScreen } from './lib/auth.js';
@@ -49,7 +50,7 @@ async function draw(force = false) {
   const body = $('m-body');
   let logs, error;
   if (CACHE && CACHE.date === SEL && !force) logs = CACHE.logs;
-  else { const r = await supabase.from('fin_production_log').select('*').eq('production_date', SEL).limit(20000); logs = r.data; error = r.error; if (!error) CACHE = { date: SEL, logs }; }
+  else { const r = await fetchAll(() => supabase.from('fin_production_log').select('*').eq('production_date', SEL).order('id')); logs = r.data; error = r.error; if (!error) CACHE = { date: SEL, logs }; }
   if (error) { body.innerHTML = `<div class="state-msg" style="color:#b91c1c">Error: ${esc(error.message)}. Has sql/add_manager.sql been run?</div>`; return; }
   const teamSup = new Map(D.teams.map(t => [t.id, t.supervisor_id]));
   const prod = new Map(D.products.map(p => [p.id, p]));

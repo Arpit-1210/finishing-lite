@@ -2,6 +2,7 @@ import { supabase } from '../../lib/supabase.js';
 import { istToday } from '../../lib/roster.js';
 import { inr, num, esc } from '../../lib/calc.js';
 import { entryValue } from '../../lib/value.js';
+import { fetchAll } from '../../lib/fetchAll.js';
 
 let channel = null;
 
@@ -16,7 +17,7 @@ export async function renderInventory(root, opts = {}) {
 
   async function load() {
     const [lr, pr] = await Promise.all([
-      supabase.from('fin_production_log').select('*').limit(100000),
+      fetchAll(() => supabase.from('fin_production_log').select('*').order('id')),
       supabase.from('fin_products').select('*'),
     ]);
     if (lr.error) throw lr.error;

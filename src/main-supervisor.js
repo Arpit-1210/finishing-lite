@@ -1,4 +1,5 @@
 import './styles/base.css';
+import { fetchAll } from './lib/fetchAll.js';
 import { supabase, HAS_KEYS } from './lib/supabase.js';
 import { requireLogin, blockedScreen } from './lib/auth.js';
 import { entryValue, isKg, priceLabel } from './lib/value.js';
@@ -42,7 +43,7 @@ async function loadLogs() {
   let from = SEL, to = SEL;
   if (page === 'log' && range > 0) from = new Date(Date.parse(SEL) - range * 86400000).toISOString().slice(0, 10);
   if (page === 'reports') from = new Date(Date.parse(SEL) - 30 * 86400000).toISOString().slice(0, 10);
-  const { data, error } = await supabase.from('fin_production_log').select('*').gte('production_date', from).lte('production_date', to).order('created_at', { ascending: false }).limit(20000);
+  const { data, error } = await fetchAll(() => supabase.from('fin_production_log').select('*').gte('production_date', from).lte('production_date', to).order('created_at', { ascending: false }).order('id'));
   if (error) throw error;
   D.logs = data || [];
 }

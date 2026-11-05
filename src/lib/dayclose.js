@@ -1,6 +1,7 @@
 // Automatic daily close. After 12:00 am (Indian time) every finished day is saved as one frozen summary
 // (units, value, labour cost) and rolls into the monthly record. Runs on the database (fin_close_days).
 import { istToday, fetchRosterRows } from './roster.js';
+import { fetchAll } from './fetchAll.js';
 import { OVERTIME, buildTeamDays, sumDays, fetchSummaries, inr, num, fmtX } from './calc.js';
 
 export async function closeDays(supabase, dates = null) {
@@ -23,7 +24,7 @@ export async function loadMonthly(supabase, supervisorId = null) {
   const today = istToday();
   const [summaries, lr, pr, tr, wr, rosters] = await Promise.all([
     fetchSummaries(supabase),
-    supabase.from('fin_production_log').select('*').eq('production_date', today).limit(5000),
+    fetchAll(() => supabase.from('fin_production_log').select('*').eq('production_date', today).order('id')),
     supabase.from('fin_products').select('*'),
     supabase.from('fin_teams').select('*'),
     supabase.from('workers').select('name, daily_rate'),

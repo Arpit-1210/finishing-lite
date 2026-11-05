@@ -1,4 +1,5 @@
 import { entryValue } from './value.js';
+import { fetchAll } from './fetchAll.js';
 // Finishing has no weight. Performance = value of goods produced ÷ labour cost.
 // Labour cost for one team on one day = sum of THAT DAY's roster members' daily_rate × OVERTIME,
 // counted ONCE per team per day (not per production entry).
@@ -49,7 +50,7 @@ export function sumDays(list) {
 }
 
 export async function fetchSummaries(supabase) {
-  const { data, error } = await supabase.from('fin_daily_summary').select('*').limit(5000);
+  const { data, error } = await fetchAll(() => supabase.from('fin_daily_summary').select('*').order('summary_date'));
   if (error) { console.warn('fin_daily_summary not available:', error.message); return []; }
   return data || [];
 }

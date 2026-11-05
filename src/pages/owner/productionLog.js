@@ -3,6 +3,7 @@ import { supabase } from '../../lib/supabase.js';
 import { istToday } from '../../lib/roster.js';
 import { closeDays } from '../../lib/dayclose.js';
 import { inr, num, esc, fmtDate, teamName } from '../../lib/calc.js';
+import { fetchAll } from '../../lib/fetchAll.js';
 
 export async function renderProductionLog(root) {
   const TODAY = istToday();
@@ -16,7 +17,7 @@ export async function renderProductionLog(root) {
       <div><div style="font-size:11px;font-weight:600;color:var(--ink-dim)">SUPERVISOR</div><select id="f-sup" style="padding:8px;border:1px solid var(--border-strong);border-radius:8px"><option value="">All</option>${sups.map(s => `<option value="${s.id}">${esc(s.name)}</option>`).join('')}</select></div>
     </div><div id="pl-body"></div>`;
   async function load() {
-    const { data, error } = await supabase.from('fin_production_log').select('*').gte('production_date', root.querySelector('#f-from').value).lte('production_date', root.querySelector('#f-to').value).order('production_date', { ascending: false }).order('created_at', { ascending: false }).limit(5000);
+    const { data, error } = await fetchAll(() => supabase.from('fin_production_log').select('*').gte('production_date', root.querySelector('#f-from').value).lte('production_date', root.querySelector('#f-to').value).order('production_date', { ascending: false }).order('created_at', { ascending: false }).order('id'));
     if (error) { root.querySelector('#pl-body').innerHTML = `<div class="state-msg">${esc(error.message)}</div>`; return; }
     const sf = root.querySelector('#f-sup').value;
     const list = (data || []).filter(l => !sf || teams.find(t => t.id === l.team_id)?.supervisor_id === sf);

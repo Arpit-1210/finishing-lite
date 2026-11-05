@@ -2,6 +2,7 @@ import { supabase } from '../../lib/supabase.js';
 import { istToday, fetchRosterRows } from '../../lib/roster.js';
 import { buildTeamDays, sumDays, fetchSummaries, inr, num, fmtX, esc, fmtDate, teamName } from '../../lib/calc.js';
 import { loadMonthly, monthlyTableHTML } from '../../lib/dayclose.js';
+import { fetchAll } from '../../lib/fetchAll.js';
 
 let chart = null, channel = null;
 
@@ -32,7 +33,7 @@ export async function renderDashboard(root) {
   async function drawTeamReport() {
     if (!ctx) return;
     const day = root.querySelector('#d-team-date')?.value || TODAY;
-    const { data } = await supabase.from('fin_production_log').select('*').eq('production_date', day).limit(20000);
+    const { data } = await fetchAll(() => supabase.from('fin_production_log').select('*').eq('production_date', day).order('id'));
     const tdd = buildTeamDays(data || [], ctx.teams, ctx.wr, ctx.rosters, ctx.summaries, ctx.prods);
     const teamRows = ctx.teams.map(t => ({ t, s: sumDays(tdd.filter(r => r.teamId === t.id)) })).filter(x => x.s.wage > 0 || x.s.units > 0).sort((a, b) => b.s.ratio - a.s.ratio);
     const el = root.querySelector('#d-team'); if (!el) return;
@@ -43,7 +44,7 @@ export async function renderDashboard(root) {
   async function load() {
     const from = new Date(Date.now() + 5.5 * 3600 * 1000 - days * 86400000).toISOString().slice(0, 10);
     const [lr, pr, tr, sr, wr, rosters, summaries, monthly] = await Promise.all([
-      supabase.from('fin_production_log').select('*').gte('production_date', from).lte('production_date', TODAY).limit(20000),
+      fetchAll(() => supabase.from('fin_production_log').select('*').gte('production_date', from).lte('production_date', TODAY).order('id')),
       supabase.from('fin_products').select('*'),
       supabase.from('fin_teams').select('*'),
       supabase.from('fin_supervisors').select('*'),
