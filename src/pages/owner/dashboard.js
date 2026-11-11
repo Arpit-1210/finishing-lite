@@ -110,7 +110,7 @@ export async function renderDashboard(root) {
       const [cr, pr2] = await Promise.all([q(from, to), q(pFrom, pTo)]);
       if (cr.error) throw cr.error; if (pr2.error) throw pr2.error;
       const mk = (rows) => buildTeamDays(rows || [], ctx.teams, ctx.wr, ctx.rosters, ctx.summaries, ctx.prods);
-      makeRangeReport(from, to, mk(cr.data), mk(pr2.data), ctx.sups, ctx.teams).save(`Finishing report ${from} to ${to}.pdf`);
+      makeRangeReport(from, to, mk(cr.data), mk(pr2.data), ctx.sups).save(`Finishing report ${from} to ${to}.pdf`);
     } catch (err) { alert('Could not make the PDF: ' + (err.message || err)); }
     btn.disabled = false; btn.textContent = old;
   };

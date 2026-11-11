@@ -7,7 +7,7 @@ const nowIST = () => new Date(Date.now() + 5.5 * 3600e3).toISOString().slice(0, 
 const days = (a, b) => Math.round((new Date(b) - new Date(a)) / 86400000) + 1;
 
 /** td / prevTd = buildTeamDays rows for the period and the equal-length period right before it. sups, teams for names. */
-export function makeRangeReport(from, to, td, prevTd, sups, teams) {
+export function makeRangeReport(from, to, td, prevTd, sups) {
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
   const W = doc.internal.pageSize.getWidth(), M = 14;
   const tot = sumDays(td), prev = sumDays(prevTd);
@@ -42,11 +42,6 @@ export function makeRangeReport(from, to, td, prevTd, sups, teams) {
   const supRows = sups.map((s) => ({ s, t: sumDays(td.filter((r) => r.supId === s.id)) })).filter((x) => x.t.units > 0 || x.t.wage > 0).sort((a, b) => (a.t.pct || 999) - (b.t.pct || 999));
   h('By supervisor (best Labour % first)', doc.lastAutoTable.finalY + 10);
   autoTable(doc, { startY: doc.lastAutoTable.finalY + 13, theme: 'striped', headStyles: head, styles: { fontSize: 9.5 }, columnStyles: num3, didParseCell: rightHead, head: heads('Supervisor'), body: supRows.length ? supRows.map((x) => line(x.s.name, x.t)) : [['No data', '', '', '', '']] });
-
-  const teamRows = teams.map((t) => ({ t, s: sumDays(td.filter((r) => r.teamId === t.id)) })).filter((x) => x.s.units > 0 || x.s.wage > 0).sort((a, b) => (a.s.pct || 999) - (b.s.pct || 999));
-  h('By team (best Labour % first)', doc.lastAutoTable.finalY + 10);
-  autoTable(doc, { startY: doc.lastAutoTable.finalY + 13, theme: 'striped', headStyles: head, styles: { fontSize: 9.5 }, columnStyles: num3, didParseCell: rightHead, head: heads('Team'),
-    body: teamRows.length ? teamRows.map((x) => line(`${sups.find((s) => s.id === x.t.supervisor_id)?.name || ''} - ${x.t.name || 'Team ' + x.t.team_number}`, x.s)) : [['No data', '', '', '', '']] });
 
   const dates = [...new Set(td.map((r) => r.date))].sort();
   h('Day by day', doc.lastAutoTable.finalY + 10);
