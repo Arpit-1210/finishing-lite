@@ -2,7 +2,17 @@
   "name": "finishing-lite",
   "version": "1.0.0",
   "description": "Finishing Department Production App — Factory OS",
-  "scripts": { "dev": "vite", "build": "vite build", "preview": "vite preview" },
-  "dependencies": { "@supabase/supabase-js": "^2.39.0" },
-  "devDependencies": { "vite": "^5.0.0" }
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0",
+    "jspdf": "^2.5.1",
+    "jspdf-autotable": "^3.8.2"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0"
+  }
 }

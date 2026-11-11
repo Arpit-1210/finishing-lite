@@ -10,6 +10,9 @@ export const OVERTIME = 1.5; // peak season: every worker is paid 1.5x. Set to 1
 export const inr = n => '₹' + Math.round(n || 0).toLocaleString('en-IN');
 export const num = n => Number(n || 0).toLocaleString('en-IN');
 export const fmtX = r => (r > 0 ? Number(r).toFixed(2) + '×' : '—');
+/** Labour cost as a percentage of the value produced (lower is better). */
+export const fmtPct = p => (p > 0 ? Number(p).toFixed(1) + '%' : '—');
+export const pctOf = (wage, value) => (value > 0 ? (wage / value) * 100 : 0);
 export const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 export const fmtDate = s => { const [y, m, d] = String(s).split('-'); return `${+d} ${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+m - 1]} ${y}`; };
 export const teamName = t => t?.name || 'Team ' + (t?.team_number ?? '—');
@@ -41,12 +44,12 @@ export function buildTeamDays(logs, teams, workers, rosterRows = [], summaries =
     r.units += Number(l.quantity || 0);
     r.value += entryValue(l.quantity, l.weight, prodMap.get(l.product_id));
   }
-  return [...rows.values()].map(r => ({ ...r, ratio: r.wage > 0 ? r.value / r.wage : 0 }));
+  return [...rows.values()].map(r => ({ ...r, ratio: r.wage > 0 ? r.value / r.wage : 0, pct: pctOf(r.wage, r.value) }));
 }
 
 export function sumDays(list) {
   const s = list.reduce((a, r) => ({ units: a.units + r.units, value: a.value + r.value, wage: a.wage + r.wage }), { units: 0, value: 0, wage: 0 });
-  return { ...s, ratio: s.wage > 0 ? s.value / s.wage : 0 };
+  return { ...s, ratio: s.wage > 0 ? s.value / s.wage : 0, pct: pctOf(s.wage, s.value) };
 }
 
 export async function fetchSummaries(supabase) {

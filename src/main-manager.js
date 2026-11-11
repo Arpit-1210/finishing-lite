@@ -4,7 +4,7 @@ import './styles/owner.css';
 import { supabase } from './lib/supabase.js';
 import { requireLogin, blockedScreen } from './lib/auth.js';
 import { istToday, fetchRosterRows, rosterIndex, teamsForDay, membersForDay } from './lib/roster.js';
-import { buildTeamDays, sumDays, fetchSummaries, inr, num, fmtX, esc, fmtDate, teamName } from './lib/calc.js';
+import { buildTeamDays, sumDays, fetchSummaries, inr, num, fmtPct, pctOf, esc, fmtDate, teamName } from './lib/calc.js';
 import { entryValue } from './lib/value.js';
 import { renderInventory } from './pages/owner/inventory.js';
 
@@ -79,7 +79,6 @@ async function draw(force = false) {
       ${MONEY ? kpi('💰', 'Value Produced', inr(tot.value), 'at selling price', 'var(--green)') : kpi('📦', 'Products', num(plist.length), 'types made', 'var(--green)')}
       ${MONEY ? kpi('👷', 'Labour Cost', inr(tot.wage), '1.5× overtime included', 'var(--red)') : ''}
       ${MONEY ? kpi('🧮', 'Labour % of Value', tot.value > 0 ? pct.toFixed(1) + '%' : '—', `${inr(tot.wage)} ÷ ${inr(tot.value)}`, 'var(--orange)') : ''}
-      ${MONEY ? kpi('📈', 'Value ÷ Labour', fmtX(tot.ratio), 'higher is better', 'var(--purple)') : ''}
     </div>
     <div class="section-head"><div><div class="section-title">Products made — ${fmtDate(SEL)}</div><div class="section-sub">${SUP ? esc(D.sups.find(s => s.id === SUP)?.name || '') : 'All supervisors'} · ${num(tot.units)} units${MONEY ? ' · ' + inr(tot.value) : ''}</div></div></div>
     <div class="card" style="margin-bottom:12px;"><input id="m-q" placeholder="Search product…" value="${esc(Q)}" autocomplete="off" style="width:100%;padding:9px 10px;border:1px solid var(--border-strong);border-radius:8px;font-size:14px;box-sizing:border-box;" /></div>

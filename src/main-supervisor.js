@@ -4,7 +4,7 @@ import { supabase, HAS_KEYS } from './lib/supabase.js';
 import { requireLogin, blockedScreen } from './lib/auth.js';
 import { entryValue, isKg, priceLabel } from './lib/value.js';
 import { teamOrder, istToday, fetchRosterRows, rosterIndex, membersOn, conflictTeam, withRoster, saveRoster, hasExact, teamsForDay, membersForDay } from './lib/roster.js';
-import { buildTeamDays, sumDays, fetchSummaries, inr, num, fmtX, esc, fmtDate, teamName } from './lib/calc.js';
+import { buildTeamDays, sumDays, fetchSummaries, inr, num, fmtPct, pctOf, esc, fmtDate, teamName } from './lib/calc.js';
 import { startAutoClose, closeDays, loadMonthly, monthlyTableHTML } from './lib/dayclose.js';
 
 const $ = id => document.getElementById(id);
@@ -109,17 +109,17 @@ function drawDash() {
   const rows = teams.map(tm => {
     const r = days.find(d => d.teamId === tm.id);
     const members = membersToday(tm.id);
-    return `<tr><td class="bold">${esc(teamName(tm))}</td><td class="num">${members.length}</td><td class="num">${r ? num(r.units) : '—'}</td>${money() ? `<td class="num">${r ? inr(r.value) : '—'}</td><td class="num">${r ? inr(r.wage) : '—'}</td><td class="num" style="font-weight:700">${r ? fmtX(r.ratio) : '—'}</td>` : ''}</tr>`;
+    return `<tr><td class="bold">${esc(teamName(tm))}</td><td class="num">${members.length}</td><td class="num">${r ? num(r.units) : '—'}</td>${money() ? `<td class="num">${r ? inr(r.value) : '—'}</td><td class="num">${r ? inr(r.wage) : '—'}</td><td class="num" style="font-weight:700">${r ? fmtPct(r.pct) : '—'}</td>` : ''}</tr>`;
   }).join('');
   $('dash-content').innerHTML = `
     <div class="kpi-grid">
       <div class="kpi-card"><div class="kpi-icon">🏭</div><div class="kpi-label">Units</div><div class="kpi-value">${num(t.units)}</div><div class="kpi-sub">${fmtDate(SEL)}</div></div>
       ${money() ? `<div class="kpi-card" style="--ac:#16a34a"><div class="kpi-icon">💰</div><div class="kpi-label">Value Produced</div><div class="kpi-value">${inr(t.value)}</div><div class="kpi-sub">at selling price</div></div>
       <div class="kpi-card" style="--ac:#dc2626"><div class="kpi-icon">👷</div><div class="kpi-label">Labour Cost</div><div class="kpi-value">${inr(t.wage)}</div><div class="kpi-sub">1.5× overtime included</div></div>
-      <div class="kpi-card" style="--ac:#7c3aed"><div class="kpi-icon">📈</div><div class="kpi-label">Value ÷ Labour</div><div class="kpi-value">${fmtX(t.ratio)}</div><div class="kpi-sub">higher is better</div></div>` : `<div class="kpi-card"><div class="kpi-icon">👷</div><div class="kpi-label">Teams</div><div class="kpi-value">${teams.length}</div><div class="kpi-sub">working today</div></div>`}
+      <div class="kpi-card" style="--ac:#7c3aed"><div class="kpi-icon">📈</div><div class="kpi-label">Labour %</div><div class="kpi-value">${fmtPct(t.pct)}</div><div class="kpi-sub">lower is better</div></div>` : `<div class="kpi-card"><div class="kpi-icon">👷</div><div class="kpi-label">Teams</div><div class="kpi-value">${teams.length}</div><div class="kpi-sub">working today</div></div>`}
     </div>
     <div class="section-head"><div class="section-title">Teams — ${fmtDate(SEL)}</div></div>
-    <div class="table-wrap"><table class="dt"><thead><tr><th>Team</th><th class="num">Workers</th><th class="num">Units</th>${money() ? '<th class="num">Value</th><th class="num">Labour Cost</th><th class="num">Value ÷ Labour</th>' : ''}</tr></thead><tbody>${rows}</tbody></table></div>`;
+    <div class="table-wrap"><table class="dt"><thead><tr><th>Team</th><th class="num">Workers</th><th class="num">Units</th>${money() ? '<th class="num">Value</th><th class="num">Labour Cost</th><th class="num">Labour %</th>' : ''}</tr></thead><tbody>${rows}</tbody></table></div>`;
 }
 
 // ── production ──
@@ -144,7 +144,7 @@ function drawProd() {
       <button class="btn-primary" id="p-save" style="width:100%">Save Entry</button>
     </div>
     <div class="section-head"><div class="section-title">Entries — ${esc(teamName(teams.find(t => t.id === teamId)))} · ${fmtDate(SEL)}</div></div>
-    ${day ? `<div class="kpi-grid"><div class="kpi-card"><div class="kpi-label">Units</div><div class="kpi-value">${num(day.units)}</div></div>${money() ? `<div class="kpi-card"><div class="kpi-label">Value</div><div class="kpi-value">${inr(day.value)}</div></div><div class="kpi-card"><div class="kpi-label">Labour</div><div class="kpi-value">${inr(day.wage)}</div></div><div class="kpi-card"><div class="kpi-label">Value ÷ Labour</div><div class="kpi-value">${fmtX(day.ratio)}</div></div>` : ''}</div>` : ''}
+    ${day ? `<div class="kpi-grid"><div class="kpi-card"><div class="kpi-label">Units</div><div class="kpi-value">${num(day.units)}</div></div>${money() ? `<div class="kpi-card"><div class="kpi-label">Value</div><div class="kpi-value">${inr(day.value)}</div></div><div class="kpi-card"><div class="kpi-label">Labour</div><div class="kpi-value">${inr(day.wage)}</div></div><div class="kpi-card"><div class="kpi-label">Labour %</div><div class="kpi-value">${fmtPct(day.pct)}</div></div>` : ''}</div>` : ''}
     ${entriesTable(entries)}`;
   $('prod-content').querySelectorAll('.team-tab').forEach(b => b.onclick = () => { teamId = b.dataset.t; drawProd(); });
   const prodNote = () => {
@@ -299,10 +299,10 @@ async function drawReports() {
   const monthly = money() ? await loadMonthly(supabase, supId) : [];
   const M = money();
   $('rep-content').innerHTML = `
-    <div class="section-head"><div><div class="section-title">Team performance — last 30 days</div>${M ? '<div class="section-sub">Value produced ÷ labour cost</div>' : ''}</div></div>
-    <div class="table-wrap"><table class="dt"><thead><tr><th>Team</th><th class="num">Units</th>${M ? '<th class="num">Value</th><th class="num">Labour Cost</th><th class="num">Value ÷ Labour</th>' : ''}</tr></thead><tbody>${byTeam.map(({ t, s }) => `<tr><td class="bold">${esc(teamName(t))}</td><td class="num">${num(s.units)}</td>${M ? `<td class="num">${inr(s.value)}</td><td class="num">${inr(s.wage)}</td><td class="num" style="font-weight:700">${fmtX(s.ratio)}</td>` : ''}</tr>`).join('')}</tbody></table></div>
+    <div class="section-head"><div><div class="section-title">Team performance — last 30 days</div>${M ? '<div class="section-sub">Labour cost as % of value produced</div>' : ''}</div></div>
+    <div class="table-wrap"><table class="dt"><thead><tr><th>Team</th><th class="num">Units</th>${M ? '<th class="num">Value</th><th class="num">Labour Cost</th><th class="num">Labour %</th>' : ''}</tr></thead><tbody>${byTeam.map(({ t, s }) => `<tr><td class="bold">${esc(teamName(t))}</td><td class="num">${num(s.units)}</td>${M ? `<td class="num">${inr(s.value)}</td><td class="num">${inr(s.wage)}</td><td class="num" style="font-weight:700">${fmtPct(s.pct)}</td>` : ''}</tr>`).join('')}</tbody></table></div>
     <div class="section-head"><div class="section-title">Day by day</div></div>
-    <div class="table-wrap"><table class="dt"><thead><tr><th>Date</th><th>Team</th><th class="num">Units</th>${M ? '<th class="num">Value</th><th class="num">Labour Cost</th><th class="num">Value ÷ Labour</th>' : ''}</tr></thead><tbody>${days.map(d => `<tr><td>${fmtDate(d.date)}</td><td class="bold">${esc(d.team)}</td><td class="num">${num(d.units)}</td>${M ? `<td class="num">${inr(d.value)}</td><td class="num">${inr(d.wage)}</td><td class="num" style="font-weight:700">${fmtX(d.ratio)}</td>` : ''}</tr>`).join('') || `<tr><td colspan="${M ? 6 : 3}" style="text-align:center;padding:20px;color:#667085">No data</td></tr>`}</tbody></table></div>
+    <div class="table-wrap"><table class="dt"><thead><tr><th>Date</th><th>Team</th><th class="num">Units</th>${M ? '<th class="num">Value</th><th class="num">Labour Cost</th><th class="num">Labour %</th>' : ''}</tr></thead><tbody>${days.map(d => `<tr><td>${fmtDate(d.date)}</td><td class="bold">${esc(d.team)}</td><td class="num">${num(d.units)}</td>${M ? `<td class="num">${inr(d.value)}</td><td class="num">${inr(d.wage)}</td><td class="num" style="font-weight:700">${fmtPct(d.pct)}</td>` : ''}</tr>`).join('') || `<tr><td colspan="${M ? 6 : 3}" style="text-align:center;padding:20px;color:#667085">No data</td></tr>`}</tbody></table></div>
     ${M ? `<div class="section-head"><div class="section-title">Monthly record</div></div>
     ${monthlyTableHTML(monthly, 'dt')}` : ''}`;
 }

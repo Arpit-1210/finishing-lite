@@ -2,7 +2,7 @@
 // (units, value, labour cost) and rolls into the monthly record. Runs on the database (fin_close_days).
 import { istToday, fetchRosterRows } from './roster.js';
 import { fetchAll } from './fetchAll.js';
-import { OVERTIME, buildTeamDays, sumDays, fetchSummaries, inr, num, fmtX } from './calc.js';
+import { OVERTIME, buildTeamDays, sumDays, fetchSummaries, inr, num, fmtPct } from './calc.js';
 
 export async function closeDays(supabase, dates = null) {
   const { error } = await supabase.rpc('fin_close_days', { p_dates: dates, p_mult: OVERTIME });
@@ -50,14 +50,14 @@ export async function loadMonthly(supabase, supervisorId = null) {
     add(today, t.units, t.value, t.wage);
   }
   return [...months.values()].sort((a, b) => b.month.localeCompare(a.month))
-    .map(m => ({ ...m, days: m.dates.size, ratio: m.wage > 0 ? m.value / m.wage : 0 }));
+    .map(m => ({ ...m, days: m.dates.size, ratio: m.wage > 0 ? m.value / m.wage : 0, pct: m.value > 0 ? (m.wage / m.value) * 100 : 0 }));
 }
 
 export function monthlyTableHTML(rows, tableClass) {
   const label = k => { const [y, m] = k.split('-'); return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+m - 1] + ' ' + y; };
-  const body = rows.map(r => `<tr><td class="bold">${label(r.month)}</td><td class="num">${r.days}</td><td class="num">${num(r.units)}</td><td class="num">${inr(r.value)}</td><td class="num">${inr(r.wage)}</td><td class="num" style="font-weight:700;">${fmtX(r.ratio)}</td></tr>`).join('')
+  const body = rows.map(r => `<tr><td class="bold">${label(r.month)}</td><td class="num">${r.days}</td><td class="num">${num(r.units)}</td><td class="num">${inr(r.value)}</td><td class="num">${inr(r.wage)}</td><td class="num" style="font-weight:700;">${fmtPct(r.pct)}</td></tr>`).join('')
     || '<tr><td colspan="6" style="text-align:center;padding:20px;color:#667085;">No production recorded yet</td></tr>';
   return `<div class="table-wrap"><table class="${tableClass}">
-    <thead><tr><th>Month</th><th class="num">Days</th><th class="num">Units</th><th class="num">Value</th><th class="num">Labour Cost</th><th class="num">Value ÷ Labour</th></tr></thead>
+    <thead><tr><th>Month</th><th class="num">Days</th><th class="num">Units</th><th class="num">Value</th><th class="num">Labour Cost</th><th class="num">Labour %</th></tr></thead>
     <tbody>${body}</tbody></table></div>`;
 }
